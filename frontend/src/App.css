@@ -55,23 +55,11 @@ main {
   margin-top: 40px;
 }
 
-.space-placeholder {
-  min-height: 450px;
+.cesium-container {
+  width: 100%;
+  height: 500px;
   margin-top: 20px;
   border: 1px solid #26304a;
   border-radius: 12px;
-  background: #080d1a;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.earth {
-  font-size: 120px;
-}
-
-.space-placeholder p {
-  color: #7180a0;
-  margin-top: 20px;
+  overflow: hidden;
 }
