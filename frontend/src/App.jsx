@@ -1,6 +1,8 @@
+import './App.css'
 import Header from './components/Header'
 import StatCard from './components/StatCard'
-import './App.css'
+import SpaceView from './components/SpaceView'
+
 function App() {
   return (
     <div>
@@ -25,6 +27,8 @@ function App() {
             value="3"
           />
         </div>
+
+        <SpaceView />
 
         <p>Monitoring orbital objects and potential close approaches.</p>
       </main>
