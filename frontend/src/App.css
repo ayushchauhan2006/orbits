@@ -1,65 +1,772 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b1020;
-  color: white;
+* {
+  box-sizing: border-box;
 }
 
+html,
+body,
 #root {
-  min-height: 100vh;
-}
-
-header {
-  padding: 30px 50px;
-  border-bottom: 1px solid #26304a;
-}
-
-header h1 {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  font-size: 32px;
 }
 
-header p {
-  margin-top: 8px;
-  color: #9ca8c7;
+body {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background: #05070b;
+  color: #ffffff;
+
+  overflow: hidden;
 }
 
-main {
-  padding: 40px 50px;
+button {
+  font: inherit;
 }
 
-.stats {
+.app {
+  width: 100%;
+  height: 100vh;
+
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(20, 40, 70, 0.18),
+      transparent 45%
+    ),
+    #05070b;
+}
+
+
+/* ========================================
+   TOP NAVIGATION
+   ======================================== */
+
+.topbar {
+  height: 70px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 28px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  background:
+    rgba(5, 7, 11, 0.94);
+
+  backdrop-filter: blur(14px);
+
+  z-index: 20;
+}
+
+
+/* BRAND */
+
+.brand {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  min-width: 230px;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid
+    rgba(0, 220, 255, 0.65);
+
+  border-radius: 50%;
+
+  color: #00d9ff;
+
+  font-size: 17px;
+  font-weight: 700;
+
+  box-shadow:
+    0 0 18px
+    rgba(0, 217, 255, 0.2);
+}
+
+.brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.brand-subtitle {
+  margin-top: 2px;
+
+  font-size: 8px;
+  letter-spacing: 2px;
+
+  color: rgba(255, 255, 255, 0.42);
+}
+
+
+/* ========================================
+   NAVIGATION
+   ======================================== */
+
+.navigation {
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+}
+
+.nav-item {
+  height: 100%;
+
+  padding: 0 18px;
+
+  border: none;
+  border-bottom: 2px solid transparent;
+
+  background: transparent;
+
+  color: rgba(255, 255, 255, 0.52);
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.nav-item:hover {
+  color: #ffffff;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+.nav-item.active {
+  color: #ffffff;
+
+  border-bottom-color: #00d9ff;
+}
+
+
+/* ========================================
+   SYSTEM STATUS
+   ======================================== */
+
+.status {
+  margin-left: auto;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  font-size: 10px;
+  letter-spacing: 1.4px;
+
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #27e6a4;
+
+  box-shadow:
+    0 0 10px
+    rgba(39, 230, 164, 0.8);
+}
+
+
+/* ========================================
+   MAIN
+   ======================================== */
+
+.main {
+  position: relative;
+
+  flex: 1;
+
+  min-height: 0;
+
+  overflow: hidden;
+}
+
+
+/* ========================================
+   NORMAL PAGES
+   ======================================== */
+
+.page {
+  width: 100%;
+  height: 100%;
+
+  overflow-y: auto;
+
+  padding: 48px 55px 60px;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(0, 217, 255, 0.045),
+      transparent 40%
+    );
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  margin-bottom: 35px;
+}
+
+.page-kicker {
+  margin-bottom: 8px;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  letter-spacing: 2px;
+
+  color: #00d9ff;
+}
+
+.page h1 {
+  margin: 0;
+
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+
+.page p {
+  margin-top: 10px;
+
+  color: rgba(255, 255, 255, 0.45);
+
+  font-size: 13px;
+}
+
+
+/* ========================================
+   CATALOG COUNT
+   ======================================== */
+
+.catalog-count {
+  display: flex;
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  padding: 16px 22px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+.catalog-count span {
+  font-size: 8px;
+
+  letter-spacing: 1.5px;
+
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.catalog-count strong {
+  margin-top: 5px;
+
+  font-size: 22px;
+
+  font-weight: 500;
+}
+
+
+/* ========================================
+   SATELLITE TABLE
+   ======================================== */
+
+.satellite-table-wrapper {
+  border: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 12px;
+
+  overflow: auto;
+
+  background:
+    rgba(255, 255, 255, 0.018);
+}
+
+.satellite-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 12px;
+}
+
+.satellite-table th {
+  position: sticky;
+  top: 0;
+
+  padding: 15px 18px;
+
+  text-align: left;
+
+  background: #0a0e16;
+
+  color: rgba(255, 255, 255, 0.4);
+
+  font-size: 9px;
+
+  letter-spacing: 1.2px;
+
+  font-weight: 500;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+}
+
+.satellite-table td {
+  padding: 13px 18px;
+
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.045);
+
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.satellite-table tbody tr {
+  transition: background 0.15s;
+}
+
+.satellite-table tbody tr:hover {
+  background:
+    rgba(0, 217, 255, 0.045);
+}
+
+.satellite-table .satellite-name {
+  color: #ffffff;
+
+  font-weight: 500;
+}
+
+
+/* ========================================
+   LOADING
+   ======================================== */
+
+.loading {
+  padding: 60px;
+
+  text-align: center;
+
+  color: rgba(255, 255, 255, 0.45);
+
+  font-size: 13px;
+}
+
+
+/* ========================================
+   SIMPLE PAGES
+   ======================================== */
+
+.simple-page {
+  max-width: 1100px;
+
+  margin: 0 auto;
+
+  padding-top: 80px;
+}
+
+.simple-page h1 {
+  font-size: 40px;
+}
+
+.about-text {
+  max-width: 650px;
+
+  line-height: 1.8;
+
+  font-size: 14px !important;
+}
+
+.feature-card {
+  margin-top: 35px;
+
+  padding: 25px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 12px;
+
+  background:
+    rgba(255, 255, 255, 0.025);
+}
+
+.feature-card h3 {
+  margin: 0 0 8px;
+
+  font-size: 15px;
+
+  font-weight: 500;
+}
+
+.feature-card p {
+  margin: 0;
+
+  line-height: 1.7;
+}
+
+.feature-icon {
+  margin-bottom: 15px;
+
+  color: #00d9ff;
+
+  font-size: 25px;
+}
+
+.about-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 15px;
+}
+
+.about-grid .feature-card {
   margin-top: 25px;
 }
 
-.stat-card {
+
+/* ========================================
+   BOTTOM STATUS BAR
+   ======================================== */
+
+.statusbar {
+  height: 52px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 28px;
+
+  gap: 20px;
+
+  border-top: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  background:
+    rgba(5, 7, 11, 0.96);
+
+  backdrop-filter: blur(14px);
+
+  z-index: 20;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+.status-label {
+  font-size: 9px;
+
+  letter-spacing: 1.4px;
+
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.status-value {
+  font-size: 11px;
+
+  font-weight: 600;
+
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.active-value {
+  color: #27e6a4;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+
+  background:
+    rgba(255, 255, 255, 0.1);
+}
+
+.status-spacer {
   flex: 1;
-  padding: 25px;
-  background: #121a2d;
-  border: 1px solid #26304a;
-  border-radius: 12px;
 }
 
-.stat-card p {
-  margin: 0;
-  color: #9ca8c7;
-}
 
-.stat-card h2 {
-  margin: 12px 0 0;
-  font-size: 32px;
-}
+/* ========================================
+   CESIUM
+   ======================================== */
+
 .space-view {
-  margin-top: 40px;
+  position: relative;
+
+  width: 100%;
+  height: 100%;
 }
 
 .cesium-container {
+  position: absolute;
+
+  inset: 0;
+
   width: 100%;
-  height: 500px;
-  margin-top: 20px;
-  border: 1px solid #26304a;
-  border-radius: 12px;
-  overflow: hidden;
+  height: 100%;
+}
+
+.space-view h2 {
+  display: none;
+}
+
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 800px) {
+
+  .brand {
+    min-width: auto;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .navigation {
+    display: none;
+  }
+
+  .page {
+    padding: 30px 18px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 20px;
+  }
+
+  .catalog-count {
+    align-items: flex-start;
+  }
+
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .statusbar {
+    padding: 0 14px;
+
+    gap: 10px;
+  }
+
+  .statusbar
+  .status-item:nth-of-type(3),
+  .statusbar
+  .divider:nth-of-type(2) {
+    display: none;
+  }
+}
+/* ========================================
+   SATELLITE CATALOG CONTROLS
+   ======================================== */
+
+.catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.satellite-search {
+  width: 420px;
+  max-width: 100%;
+
+  padding: 13px 16px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.1);
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  color: white;
+
+  font-size: 12px;
+
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.satellite-search::placeholder {
+  color:
+    rgba(255, 255, 255, 0.3);
+}
+
+.satellite-search:focus {
+  border-color:
+    rgba(0, 217, 255, 0.55);
+
+  background:
+    rgba(0, 217, 255, 0.025);
+}
+
+.result-count {
+  font-size: 10px;
+
+  letter-spacing: 1px;
+
+  color:
+    rgba(255, 255, 255, 0.35);
+}
+
+
+/* ========================================
+   NO RESULTS
+   ======================================== */
+
+.no-results {
+  padding: 60px;
+
+  text-align: center;
+
+  color:
+    rgba(255, 255, 255, 0.4);
+}
+
+
+/* ========================================
+   PAGINATION
+   ======================================== */
+
+.pagination {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 18px;
+
+  padding: 22px 0;
+}
+
+.page-button {
+  width: 38px;
+  height: 34px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.1);
+
+  border-radius: 7px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  color: white;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.page-button:hover:not(:disabled) {
+  background:
+    rgba(0, 217, 255, 0.1);
+
+  border-color:
+    rgba(0, 217, 255, 0.4);
+}
+
+.page-button:disabled {
+  opacity: 0.25;
+
+  cursor: not-allowed;
+}
+
+.page-number {
+  min-width: 100px;
+
+  text-align: center;
+
+  font-size: 11px;
+
+  color:
+    rgba(255, 255, 255, 0.5);
+}
+
+
+/* ========================================
+   MOBILE CATALOG
+   ======================================== */
+
+@media (max-width: 800px) {
+
+  .catalog-controls {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+  .satellite-search {
+    width: 100%;
+  }
+
+  .satellite-table {
+    min-width: 700px;
+  }
 }

@@ -240,134 +240,155 @@ function SpaceView() {
             viewer.scene.canvas
           )
 
-        clickHandler.setInputAction(
-          (click) => {
-            if (
-              !isActive ||
-              viewer.isDestroyed()
-            ) {
-              return
-            }
+clickHandler.setInputAction(
+  (click) => {
+    if (
+      !isActive ||
+      viewer.isDestroyed()
+    ) {
+      return
+    }
 
-            const pickedObject =
-              viewer.scene.pick(
-                click.position
-              )
+    const pickedObject =
+      viewer.scene.pick(click.position)
 
-            // --------------------------------
-            // CLICKED NOTHING
-            // --------------------------------
+    if (
+      !pickedObject ||
+      !pickedObject.id
+    ) {
+      return
+    }
 
-            if (
-              !pickedObject ||
-              !pickedObject.id
-            ) {
-              return
-            }
+    // --------------------------------
+    // CHECK FOR CLUSTER
+    // --------------------------------
 
-            const entity =
-              pickedObject.id
+    if (
+      pickedObject.id.billboard &&
+      pickedObject.id.position
+    ) {
+      const clusterPosition =
+        pickedObject.id.position
 
-            // --------------------------------
-            // IGNORE CLUSTERS
-            // --------------------------------
+      console.log(
+        'CLUSTER CLICKED'
+      )
 
-            if (!entity.position) {
-              console.log(
-                'Clicked a cluster'
-              )
+      // Zoom into the cluster
+      viewer.camera.flyTo({
+        destination: clusterPosition,
 
-              return
-            }
+        duration: 1.5,
 
-            // --------------------------------
-            // HIDE PREVIOUS LABEL
-            // --------------------------------
+        offset:
+          new HeadingPitchRange(
+            0,
+            -Math.PI / 3,
+            4000000
+          ),
+      })
 
-            if (
-              selectedEntity &&
-              selectedEntity.label
-            ) {
-              selectedEntity.label.show =
-                false
-            }
+      // Do not open satellite panel
+      return
+    }
 
-            // --------------------------------
-            // SELECT NEW SATELLITE
-            // --------------------------------
+    // --------------------------------
+    // INDIVIDUAL SATELLITE
+    // --------------------------------
 
-            selectedEntity = entity
+    const entity =
+      pickedObject.id
 
-            if (
-              selectedEntity.label
-            ) {
-              selectedEntity.label.show =
-                true
-            }
+    if (!entity.position) {
+      return
+    }
 
-            viewer.selectedEntity =
-              selectedEntity
+    // --------------------------------
+    // HIDE PREVIOUS LABEL
+    // --------------------------------
 
-            // --------------------------------
-            // GET SATELLITE INFORMATION
-            // --------------------------------
+    if (
+      selectedEntity &&
+      selectedEntity.label
+    ) {
+      selectedEntity.label.show = false
+    }
 
-            const info =
-              selectedEntity.satelliteInfo
+    // --------------------------------
+    // SELECT SATELLITE
+    // --------------------------------
 
-            if (info) {
-              setSelectedSatellite({
-                name: info.name,
+    selectedEntity = entity
 
-                noradId: info.noradId,
+    if (
+      selectedEntity.label
+    ) {
+      selectedEntity.label.show = true
+    }
 
-                latitude: info.latitude,
+    viewer.selectedEntity =
+      selectedEntity
 
-                longitude: info.longitude,
+    // --------------------------------
+    // INFORMATION PANEL
+    // --------------------------------
 
-                altitude: info.altitude,
+    const info =
+      selectedEntity.satelliteInfo
 
-                epoch: info.epoch,
-              })
-            }
+    if (info) {
+      setSelectedSatellite({
+        name: info.name,
 
-            // --------------------------------
-            // GET CURRENT POSITION
-            // --------------------------------
+        noradId: info.noradId,
 
-            const position =
-              selectedEntity.position.getValue(
-                viewer.clock.currentTime
-              )
+        latitude: info.latitude,
 
-            if (!position) {
-              return
-            }
+        longitude: info.longitude,
 
-            // --------------------------------
-            // ZOOM TO SELECTED SATELLITE
-            // --------------------------------
+        altitude: info.altitude,
 
-            viewer.camera.flyTo({
-              destination: position,
+        epoch: info.epoch,
+      })
+    }
 
-              duration: 2,
+    // --------------------------------
+    // CURRENT POSITION
+    // --------------------------------
 
-              offset:
-                new HeadingPitchRange(
-                  0,
-                  -Math.PI / 6,
-                  1000000
-                ),
-            })
+    const position =
+      selectedEntity.position.getValue(
+        viewer.clock.currentTime
+      )
 
-            console.log(
-              'SELECTED SATELLITE:',
-              selectedEntity.name
-            )
-          },
-          ScreenSpaceEventType.LEFT_CLICK
-        )
+    if (!position) {
+      return
+    }
+
+    // --------------------------------
+    // ZOOM TO SATELLITE
+    // --------------------------------
+
+    viewer.camera.flyTo({
+      destination: position,
+
+      duration: 2,
+
+      offset:
+        new HeadingPitchRange(
+          0,
+          -Math.PI / 6,
+          1000000
+        ),
+    })
+
+    console.log(
+      'SELECTED SATELLITE:',
+      selectedEntity.name
+    )
+  },
+  ScreenSpaceEventType.LEFT_CLICK
+)
 
         console.log(
           'Cesium + real satellite visualization working'
