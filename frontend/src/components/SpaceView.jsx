@@ -36,7 +36,7 @@ function SpaceView() {
     let selectedEntity = null
     let isActive = true
     let satelliteDataSource
-
+    let updateInterval = null
     const loadSatellites = async () => {
       try {
         // --------------------------------
@@ -70,6 +70,100 @@ function SpaceView() {
           satelliteDataSource
         )
 
+        const updateSatellitePositions = async () => {
+
+  try {
+
+    const response = await fetch(
+      'http://localhost:3000/api/satellites'
+    )
+
+    if (!response.ok) {
+      throw new Error(
+        'Failed to fetch satellite positions'
+      )
+    }
+
+    const satellites =
+      await response.json()
+
+    if (!isActive) {
+      return
+    }
+
+    satellites.forEach((satellite) => {
+
+      const entity =
+        satelliteDataSource.entities.getById(
+          String(satellite.id)
+        )
+
+      if (!entity) {
+        return
+      }
+
+      const longitude =
+        Number(satellite.longitude)
+
+      const latitude =
+        Number(satellite.latitude)
+
+      const altitude =
+        Number(satellite.altitude)
+
+      if (
+        !Number.isFinite(longitude) ||
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(altitude)
+      ) {
+        return
+      }
+
+      // --------------------------------
+      // MOVE SATELLITE
+      // --------------------------------
+
+      entity.position =
+        Cartesian3.fromDegrees(
+          longitude,
+          latitude,
+          altitude
+        )
+
+      // --------------------------------
+      // UPDATE INFORMATION
+      // --------------------------------
+
+      entity.satelliteInfo = {
+        ...entity.satelliteInfo,
+
+        latitude,
+
+        longitude,
+
+        altitude,
+
+        velocity:
+          satellite.velocity,
+
+        speed:
+          satellite.speed,
+
+        timestamp:
+          satellite.timestamp,
+      }
+
+    })
+
+  } catch (error) {
+
+    console.error(
+      'Position update error:',
+      error
+    )
+
+  }
+}
         // --------------------------------
         // ENABLE CLUSTERING
         // --------------------------------
@@ -204,6 +298,14 @@ function SpaceView() {
           satelliteDataSource.entities.values.length
         )
 
+        // --------------------------------
+        // REAL-TIME POSITION UPDATES
+        // --------------------------------
+
+          updateInterval = setInterval(
+              updateSatellitePositions,
+                  1000
+              )
         // --------------------------------
         // GLOBAL STARTING VIEW
         // --------------------------------
@@ -409,20 +511,30 @@ clickHandler.setInputAction(
     // --------------------------------
 
     return () => {
-      isActive = false
+  isActive = false
 
-      if (clickHandler) {
-        clickHandler.destroy()
-      }
+  // Stop real-time satellite position updates
+  if (updateInterval) {
+    clearInterval(updateInterval)
+    updateInterval = null
+  }
 
-      if (
-        viewer &&
-        !viewer.isDestroyed()
-      ) {
-        viewer.destroy()
-      }
-    }
-  }, [])
+  // Destroy click handler
+  if (clickHandler) {
+    clickHandler.destroy()
+    clickHandler = null
+  }
+
+  // Destroy Cesium viewer
+  if (
+    viewer &&
+    !viewer.isDestroyed()
+  ) {
+    viewer.destroy()
+    viewer = null
+  }
+}
+}, [])
 
   return (
     <section className="space-view">
