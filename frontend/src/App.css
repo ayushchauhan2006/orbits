@@ -9,7 +9,12 @@ body,
   height: 100%;
   margin: 0;
 }
-
+.three-container {
+  width: 100%;
+  height: calc(100vh - 70px);
+  position: relative;
+  overflow: hidden;
+}
 body {
   font-family:
     Inter,
@@ -769,4 +774,65 @@ button {
   .satellite-table {
     min-width: 700px;
   }
+}
+
+.satellite-telemetry {
+  position: absolute;
+  top: 90px;
+  right: 25px;
+
+  width: 280px;
+  padding: 18px;
+
+  background: rgba(10, 15, 25, 0.92);
+
+  border: 1px solid rgba(0, 200, 255, 0.35);
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-family: monospace;
+
+  z-index: 10;
+}
+
+.satellite-telemetry h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin: 8px 0;
+}
+
+.telemetry-row span {
+  color: #8b9bb4;
+}
+
+.telemetry-row strong {
+  color: #ffffff;
+}
+
+.satellite-telemetry hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+
+  margin: 12px 0;
+}
+
+.telemetry-updated {
+  margin-top: 15px;
+
+  font-size: 11px;
+
+  color: #6f8099;
+}
+.space-view {
+  position: relative;
 }

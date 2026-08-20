@@ -1,665 +1,498 @@
-import { useEffect, useRef, useState } from 'react'
 import {
-  Ion,
-  Viewer,
-  Terrain,
-  ImageryLayer,
-  Cartesian3,
-  Cartesian2,
-  Color,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
-  HeadingPitchRange,
-  CustomDataSource,
-} from 'cesium'
-
-import 'cesium/Build/Cesium/Widgets/widgets.css'
-
-function SpaceView() {
-  const containerRef = useRef(null)
-
-  // --------------------------------
-  // SELECTED SATELLITE INFORMATION
-  // --------------------------------
-
-  const [selectedSatellite, setSelectedSatellite] =
-    useState(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    Ion.defaultAccessToken =
-      import.meta.env.VITE_CESIUM_ION_ACCESS_TOKEN
-
-    let viewer
-    let clickHandler
-    let selectedEntity = null
-    let isActive = true
-    let satelliteDataSource
-    let updateInterval = null
-    const loadSatellites = async () => {
-      try {
-        // --------------------------------
-        // CREATE CESIUM VIEWER
-        // --------------------------------
-
-        viewer = new Viewer(containerRef.current, {
-          baseLayer: ImageryLayer.fromWorldImagery(),
-          terrain: Terrain.fromWorldTerrain(),
-
-          baseLayerPicker: false,
-          animation: false,
-          timeline: false,
-          geocoder: false,
-          homeButton: false,
-          sceneModePicker: false,
-          navigationHelpButton: false,
-          fullscreenButton: false,
-        })
-
-        viewer.scene.globe.enableLighting = true
-
-        // --------------------------------
-        // CREATE SATELLITE DATA SOURCE
-        // --------------------------------
-
-        satelliteDataSource =
-          new CustomDataSource('satellites')
-
-        viewer.dataSources.add(
-          satelliteDataSource
-        )
-
-        const updateSatellitePositions = async () => {
-
-  try {
-
-    const response = await fetch(
-      'http://localhost:3000/api/satellites'
-    )
-
-    if (!response.ok) {
-      throw new Error(
-        'Failed to fetch satellite positions'
-      )
-    }
-
-    const satellites =
-      await response.json()
-
-    if (!isActive) {
-      return
-    }
-
-    satellites.forEach((satellite) => {
-
-      const entity =
-        satelliteDataSource.entities.getById(
-          String(satellite.id)
-        )
-
-      if (!entity) {
-        return
-      }
-
-      const longitude =
-        Number(satellite.longitude)
-
-      const latitude =
-        Number(satellite.latitude)
-
-      const altitude =
-        Number(satellite.altitude)
-
-      if (
-        !Number.isFinite(longitude) ||
-        !Number.isFinite(latitude) ||
-        !Number.isFinite(altitude)
-      ) {
-        return
-      }
-
-      // --------------------------------
-      // MOVE SATELLITE
-      // --------------------------------
-
-      entity.position =
-        Cartesian3.fromDegrees(
-          longitude,
-          latitude,
-          altitude
-        )
-
-      // --------------------------------
-      // UPDATE INFORMATION
-      // --------------------------------
-
-      entity.satelliteInfo = {
-        ...entity.satelliteInfo,
-
-        latitude,
-
-        longitude,
-
-        altitude,
-
-        velocity:
-          satellite.velocity,
-
-        speed:
-          satellite.speed,
-
-        timestamp:
-          satellite.timestamp,
-      }
-
-    })
-
-  } catch (error) {
-
-    console.error(
-      'Position update error:',
-      error
-    )
-
-  }
-}
-        // --------------------------------
-        // ENABLE CLUSTERING
-        // --------------------------------
-
-        satelliteDataSource.clustering.enabled =
-          true
-
-        satelliteDataSource.clustering.pixelRange =
-          50
-
-        satelliteDataSource.clustering.minimumClusterSize =
-          4
-
-        // --------------------------------
-        // FETCH REAL SATELLITE DATA
-        // --------------------------------
-
-        console.log(
-          'Fetching real satellite data...'
-        )
-
-        const response = await fetch(
-          'http://localhost:3000/api/satellites'
-        )
-
-        if (!response.ok) {
-          throw new Error(
-            'Failed to fetch satellite data'
-          )
-        }
-
-        const satellites = await response.json()
-
-        if (!isActive) {
-          return
-        }
-
-        console.log(
-          'REAL SATELLITE RESPONSE:',
-          satellites
-        )
-
-        console.log(
-          'NUMBER OF SATELLITES:',
-          satellites.length
-        )
-
-        // --------------------------------
-        // ADD SATELLITES
-        // --------------------------------
-
-        satellites.forEach((satellite) => {
-          const longitude =
-            Number(satellite.longitude)
-
-          const latitude =
-            Number(satellite.latitude)
-
-          const altitude =
-            Number(satellite.altitude)
-
-          if (
-            !Number.isFinite(longitude) ||
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(altitude)
-          ) {
-            return
-          }
-
-          satelliteDataSource.entities.add({
-            id: String(satellite.id),
-
-            name: satellite.name,
-
-            // Store our API information
-            // directly on the entity
-            satelliteInfo: {
-              name: satellite.name,
-              noradId: satellite.noradId,
-              latitude,
-              longitude,
-              altitude,
-              epoch: satellite.epoch,
-            },
-
-            position: Cartesian3.fromDegrees(
-              longitude,
-              latitude,
-              altitude
-            ),
-
-            // --------------------------------
-            // SATELLITE MARKER
-            // --------------------------------
-
-            point: {
-              pixelSize: 8,
-
-              color: Color.CYAN,
-
-              outlineColor: Color.WHITE,
-
-              outlineWidth: 2,
-            },
-
-            // --------------------------------
-            // HIDDEN LABEL
-            // --------------------------------
-
-            label: {
-              text: satellite.name,
-
-              font: '15px sans-serif',
-
-              fillColor: Color.WHITE,
-
-              showBackground: true,
-
-              backgroundColor:
-                Color.BLACK.withAlpha(0.8),
-
-              pixelOffset:
-                new Cartesian2(0, -25),
-
-              show: false,
-            },
-          })
-        })
-
-        console.log(
-          'CESIUM SATELLITES:',
-          satelliteDataSource.entities.values.length
-        )
-
-        // --------------------------------
-        // REAL-TIME POSITION UPDATES
-        // --------------------------------
-
-          updateInterval = setInterval(
-              updateSatellitePositions,
-                  1000
-              )
-        // --------------------------------
-        // GLOBAL STARTING VIEW
-        // --------------------------------
-
-        if (
-          !isActive ||
-          viewer.isDestroyed()
-        ) {
-          return
-        }
-
-        viewer.camera.setView({
-          destination:
-            Cartesian3.fromDegrees(
-              0,
-              20,
-              16000000
-            ),
-        })
-
-        // --------------------------------
-        // CLICK HANDLER
-        // --------------------------------
-
-        if (
-          !isActive ||
-          viewer.isDestroyed()
-        ) {
-          return
-        }
-
-        clickHandler =
-          new ScreenSpaceEventHandler(
-            viewer.scene.canvas
-          )
-
-clickHandler.setInputAction(
-  (click) => {
-    if (
-      !isActive ||
-      viewer.isDestroyed()
-    ) {
-      return
-    }
-
-    const pickedObject =
-      viewer.scene.pick(click.position)
-
-    if (
-      !pickedObject ||
-      !pickedObject.id
-    ) {
-      return
-    }
-
-    // --------------------------------
-    // CHECK FOR CLUSTER
-    // --------------------------------
-
-    if (
-      pickedObject.id.billboard &&
-      pickedObject.id.position
-    ) {
-      const clusterPosition =
-        pickedObject.id.position
-
-      console.log(
-        'CLUSTER CLICKED'
-      )
-
-      // Zoom into the cluster
-      viewer.camera.flyTo({
-        destination: clusterPosition,
-
-        duration: 1.5,
-
-        offset:
-          new HeadingPitchRange(
-            0,
-            -Math.PI / 3,
-            4000000
-          ),
-      })
-
-      // Do not open satellite panel
-      return
-    }
-
-    // --------------------------------
-    // INDIVIDUAL SATELLITE
-    // --------------------------------
-
-    const entity =
-      pickedObject.id
-
-    if (!entity.position) {
-      return
-    }
-
-    // --------------------------------
-    // HIDE PREVIOUS LABEL
-    // --------------------------------
-
-    if (
-      selectedEntity &&
-      selectedEntity.label
-    ) {
-      selectedEntity.label.show = false
-    }
-
-    // --------------------------------
-    // SELECT SATELLITE
-    // --------------------------------
-
-    selectedEntity = entity
-
-    if (
-      selectedEntity.label
-    ) {
-      selectedEntity.label.show = true
-    }
-
-    viewer.selectedEntity =
-      selectedEntity
-
-    // --------------------------------
-    // INFORMATION PANEL
-    // --------------------------------
-
-    const info =
-      selectedEntity.satelliteInfo
-
-    if (info) {
-      setSelectedSatellite({
-        name: info.name,
-
-        noradId: info.noradId,
-
-        latitude: info.latitude,
-
-        longitude: info.longitude,
-
-        altitude: info.altitude,
-
-        epoch: info.epoch,
-      })
-    }
-
-    // --------------------------------
-    // CURRENT POSITION
-    // --------------------------------
-
-    const position =
-      selectedEntity.position.getValue(
-        viewer.clock.currentTime
-      )
-
-    if (!position) {
-      return
-    }
-
-    // --------------------------------
-    // ZOOM TO SATELLITE
-    // --------------------------------
-
-    viewer.camera.flyTo({
-      destination: position,
-
-      duration: 2,
-
-      offset:
-        new HeadingPitchRange(
-          0,
-          -Math.PI / 6,
-          1000000
-        ),
-    })
-
-    console.log(
-      'SELECTED SATELLITE:',
-      selectedEntity.name
-    )
-  },
-  ScreenSpaceEventType.LEFT_CLICK
-)
-
-        console.log(
-          'Cesium + real satellite visualization working'
-        )
-
-      } catch (error) {
-        console.error(
-          'Satellite loading error:',
-          error
-        )
-      }
-    }
-
-    loadSatellites()
-
-    // --------------------------------
-    // CLEANUP
-    // --------------------------------
-
-    return () => {
-  isActive = false
-
-  // Stop real-time satellite position updates
-  if (updateInterval) {
-    clearInterval(updateInterval)
-    updateInterval = null
-  }
-
-  // Destroy click handler
-  if (clickHandler) {
-    clickHandler.destroy()
-    clickHandler = null
-  }
-
-  // Destroy Cesium viewer
-  if (
-    viewer &&
-    !viewer.isDestroyed()
-  ) {
-    viewer.destroy()
-    viewer = null
-  }
-}
-}, [])
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
+
+
+import * as THREE from 'three'
+import * as satellite from 'satellite.js'
+
+import {
+  Canvas,
+  useLoader,
+  useFrame,
+} from '@react-three/fiber'
+
+import {
+  OrbitControls,
+  Line
+} from '@react-three/drei'
+
+function Earth() {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'
+  )
 
   return (
-    <section className="space-view">
+    <mesh>
+      <sphereGeometry args={[5, 64, 64]} />
 
-      <h2>Space Visualization</h2>
-
-      <div
-        ref={containerRef}
-        className="cesium-container"
+      <meshStandardMaterial
+        map={texture}
       />
-
-      {/* --------------------------------
-          SATELLITE INFORMATION PANEL
-          -------------------------------- */}
-
-      {selectedSatellite && (
-        <div
-          className="satellite-info-panel"
-          style={{
-            position: 'absolute',
-            top: '80px',
-            right: '20px',
-            width: '280px',
-            padding: '20px',
-            background: 'rgba(10, 15, 25, 0.92)',
-            color: 'white',
-            borderRadius: '12px',
-            zIndex: 1000,
-            boxShadow:
-              '0 10px 30px rgba(0,0,0,0.4)',
-          }}
-        >
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '15px',
-            }}
-          >
-
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '18px',
-              }}
-            >
-              Satellite
-            </h3>
-
-            <button
-              onClick={() => {
-                setSelectedSatellite(null)
-
-                if (
-                  selectedEntity &&
-                  selectedEntity.label
-                ) {
-                  selectedEntity.label.show =
-                    false
-                }
-
-                if (viewer) {
-                  viewer.selectedEntity =
-                    undefined
-                }
-
-                selectedEntity = null
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '20px',
-                cursor: 'pointer',
-              }}
-            >
-              ×
-            </button>
-
-          </div>
-
-          <div
-            style={{
-              marginBottom: '15px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-            }}
-          >
-            {selectedSatellite.name}
-          </div>
-
-          <div>
-            <strong>NORAD ID:</strong>{' '}
-            {selectedSatellite.noradId}
-          </div>
-
-          <div>
-            <strong>Latitude:</strong>{' '}
-            {selectedSatellite.latitude.toFixed(4)}°
-          </div>
-
-          <div>
-            <strong>Longitude:</strong>{' '}
-            {selectedSatellite.longitude.toFixed(4)}°
-          </div>
-
-          <div>
-            <strong>Altitude:</strong>{' '}
-            {(
-              selectedSatellite.altitude / 1000
-            ).toFixed(1)} km
-          </div>
-
-          <div>
-            <strong>Epoch:</strong>{' '}
-            {selectedSatellite.epoch}
-          </div>
-
-        </div>
-      )}
-
-    </section>
+    </mesh>
   )
 }
+
+function RealSatellite({
+  orbitalData,
+  objectIndex,
+  onTelemetryUpdate
+}) {
+  const satelliteRef = useRef(null)
+
+  // IMPORTANT:
+  // This must be here, NOT inside useFrame()
+  const lastTelemetryUpdate = useRef(0)
+
+  const satrec = useRef(null)
+
+  // Create SGP4 record only once
+  if (!satrec.current && orbitalData) {
+    satrec.current =
+      satellite.json2satrec(orbitalData)
+  }
+
+  useFrame(() => {
+
+    if (
+      !satelliteRef.current ||
+      !satrec.current
+    ) {
+      return
+    }
+
+    const now = new Date()
+
+    // -----------------------------
+    // SGP4 PROPAGATION
+    // -----------------------------
+
+    const state =
+      satellite.propagate(
+        satrec.current,
+        now
+      )
+
+    if (
+      !state ||
+      !state.position ||
+      !state.velocity
+    ) {
+      return
+    }
+
+    // -----------------------------
+    // GMST
+    // -----------------------------
+
+    const gmst =
+      satellite.gstime(now)
+
+    // -----------------------------
+    // ECI → ECF
+    // -----------------------------
+
+    const positionEcf =
+      satellite.eciToEcf(
+        state.position,
+        gmst
+      )
+
+    // -----------------------------
+    // ECI → GEODETIC
+    // -----------------------------
+
+    const positionGd =
+      satellite.eciToGeodetic(
+        state.position,
+        gmst
+      )
+
+    const latitude =
+      satellite.radiansToDegrees(
+        positionGd.latitude
+      )
+
+    const longitude =
+      satellite.radiansToDegrees(
+        positionGd.longitude
+      )
+
+    const altitude =
+      positionGd.height
+
+    // -----------------------------
+    // VELOCITY
+    // -----------------------------
+
+    const velocity =
+      Math.sqrt(
+        state.velocity.x ** 2 +
+        state.velocity.y ** 2 +
+        state.velocity.z ** 2
+      )
+
+    // -----------------------------
+    // THREE.JS POSITION
+    // -----------------------------
+
+    const earthRadius = 6
+    const realEarthRadius = 6378.137
+
+    const scale =
+      earthRadius / realEarthRadius
+
+    satelliteRef.current.position.set(
+      positionEcf.x * scale,
+      positionEcf.z * scale,
+      -positionEcf.y * scale
+    )
+
+    // -----------------------------
+    // TELEMETRY UPDATE
+    // -----------------------------
+
+    const currentTime =
+      performance.now()
+
+    if (
+      currentTime -
+        lastTelemetryUpdate.current >
+      200
+    ) {
+
+      lastTelemetryUpdate.current =
+        currentTime
+
+      onTelemetryUpdate((previous) => {
+
+  const updated = [...previous]
+
+  updated[objectIndex] = {
+    name: orbitalData.OBJECT_NAME,
+    noradId: orbitalData.NORAD_CAT_ID,
+
+    latitude,
+    longitude,
+    altitude,
+
+    positionX: state.position.x,
+    positionY: state.position.y,
+    positionZ: state.position.z,
+
+    velocity,
+
+    timestamp: new Date()
+  }
+
+  return updated
+})
+    }
+  })
+
+  return (
+    <mesh ref={satelliteRef}>
+
+      <sphereGeometry
+        args={[0.15, 16, 16]}
+      />
+
+      <meshStandardMaterial
+        color="red"
+        emissive="red"
+        emissiveIntensity={2}
+      />
+
+    </mesh>
+  )
+}
+
+function OrbitPath({ orbitalData }) {
+  const points = useMemo(() => {
+
+    if (!orbitalData) {
+      return []
+    }
+
+    const satrec =
+      satellite.json2satrec(orbitalData)
+
+    // SGP4 mean motion is radians/minute
+    const meanMotion = satrec.no
+
+    if (!meanMotion) {
+      return []
+    }
+
+    // Orbital period in minutes
+    const periodMinutes =
+      (2 * Math.PI) / meanMotion
+
+    const numberOfPoints = 360
+
+    const earthRadius = 6
+    const realEarthRadius = 6378.137
+
+    const scale =
+      earthRadius / realEarthRadius
+
+    const startTime = new Date()
+
+    const orbitPoints = []
+
+    for (
+      let i = 0;
+      i <= numberOfPoints;
+      i++
+    ) {
+
+      const minutesFromNow =
+        (periodMinutes * i) /
+        numberOfPoints
+
+      const time =
+        new Date(
+          startTime.getTime() +
+          minutesFromNow * 60 * 1000
+        )
+
+      // SGP4 propagation
+      const state =
+        satellite.propagate(
+          satrec,
+          time
+        )
+
+      if (
+        !state ||
+        !state.position
+      ) {
+        continue
+      }
+
+      const gmst =
+        satellite.gstime(time)
+
+      // ECI → ECF
+      const positionEcf =
+        satellite.eciToEcf(
+          state.position,
+          gmst
+        )
+
+      orbitPoints.push([
+        positionEcf.x * scale,
+        positionEcf.z * scale,
+        -positionEcf.y * scale
+      ])
+    }
+
+    return orbitPoints
+
+  }, [orbitalData])
+
+  if (points.length < 2) {
+    return null
+  }
+
+  return (
+    <Line
+      points={points}
+      color="#00d9ff"
+      lineWidth={1.5}
+    />
+  )
+}
+
+function SpaceView() {
+  const [selectedSatellite, setSelectedSatellite] =
+    useState(null)
+  const [satelliteInfo, setSatelliteInfo] =
+  useState([])
+  const [orbitalData, setOrbitalData] =
+  useState([])
+  useEffect(() => {
+  fetch('http://localhost:3000/api/orbital-data')
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch orbital data')
+      }
+
+      return response.json()
+    })
+    .then((data) => {
+  console.log('Orbital data received:', data)
+  console.log('Number of objects:', data.length)
+  console.log('Object 1:', data[0])
+  console.log('Object 2:', data[1])
+
+  if (data.length >= 2) {
+    setOrbitalData([
+      data[0],
+      data[1]
+    ])
+  }
+})
+    .catch((error) => {
+      console.error('Orbital data error:', error)
+    })
+}, [])
+  return (
+  <section className="space-view">
+
+    <h2>Space Visualization</h2>
+
+    <div className="three-container">
+
+      <Canvas
+        camera={{
+          position: [0, 0, 8],
+          fov: 45,
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+        }}
+      >
+
+        <ambientLight intensity={1} />
+
+        <directionalLight
+          position={[10, 10, 10]}
+          intensity={2}
+        />
+
+       <Earth />
+
+{orbitalData.length >= 2 && (
+  <>
+    <OrbitPath
+      orbitalData={orbitalData[0]}
+    />
+
+    <RealSatellite
+      orbitalData={orbitalData[0]}
+      objectIndex={0}
+      onTelemetryUpdate={setSatelliteInfo}
+    />
+
+
+    <OrbitPath
+      orbitalData={orbitalData[1]}
+    />
+
+    <RealSatellite
+      orbitalData={orbitalData[1]}
+      objectIndex={1}
+      onTelemetryUpdate={setSatelliteInfo}
+    />
+  </>
+)}
+
+<OrbitControls />
+
+      </Canvas>
+
+
+      {/* PUT THE TELEMETRY CODE HERE */}
+
+      <div className="telemetry-container">
+
+  {satelliteInfo.map((info, index) => {
+
+    if (!info) {
+      return null
+    }
+
+    return (
+      <div
+        className="satellite-telemetry"
+        key={info.noradId || index}
+      >
+
+        <h3>
+          🛰 {info.name || 'Unknown'}
+        </h3>
+
+        <div className="telemetry-row">
+          <span>NORAD ID</span>
+          <strong>
+            {info.noradId || 'Unknown'}
+          </strong>
+        </div>
+
+        <hr />
+
+        <div className="telemetry-row">
+          <span>Latitude</span>
+          <strong>
+            {info.latitude.toFixed(4)}°
+          </strong>
+        </div>
+
+        <div className="telemetry-row">
+          <span>Longitude</span>
+          <strong>
+            {info.longitude.toFixed(4)}°
+          </strong>
+        </div>
+
+        <div className="telemetry-row">
+          <span>Altitude</span>
+          <strong>
+            {info.altitude.toFixed(2)} km
+          </strong>
+        </div>
+
+        <hr />
+
+        <div className="telemetry-row">
+          <span>Velocity</span>
+          <strong>
+            {info.velocity.toFixed(3)} km/s
+          </strong>
+        </div>
+
+        <hr />
+
+        <div className="telemetry-row">
+          <span>ECI X</span>
+          <strong>
+            {info.positionX.toFixed(2)} km
+          </strong>
+        </div>
+
+        <div className="telemetry-row">
+          <span>ECI Y</span>
+          <strong>
+            {info.positionY.toFixed(2)} km
+          </strong>
+        </div>
+
+        <div className="telemetry-row">
+          <span>ECI Z</span>
+          <strong>
+            {info.positionZ.toFixed(2)} km
+          </strong>
+        </div>
+
+        <div className="telemetry-updated">
+          ● LIVE&nbsp;&nbsp;
+          {info.timestamp.toLocaleTimeString()}
+        </div>
+
+      </div>
+    )
+  })}
+
+</div>
+    </div>
+
+  </section>
+)}
 
 export default SpaceView
