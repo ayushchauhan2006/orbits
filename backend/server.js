@@ -12,35 +12,58 @@ app.use(cors())
 // ------------------------------------
 // FETCH LIVE DATA FROM CELESTRAK
 // ------------------------------------
+// ------------------------------------
+// FETCH LIVE DATA WITH LOCAL FALLBACK
+// ------------------------------------
 let satelliteRecords = [];
-let rawOrbitalData = []; // We will save a copy for the frontend to use
+let rawOrbitalData = [];
 
 async function fetchLiveData() {
   try {
-    console.log("Fetching live catalog from Celestrak... This might take a few seconds.");
+    console.log("Attempting to fetch live catalog from Celestrak...");
     
-    // This downloads the live data directly from the space database
     const response = await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json');
-    const data = await response.json();
     
-    rawOrbitalData = data; 
+    // 1. First, check if Celestrak sent us an HTML/Text error page instead of JSON
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Celestrak rate-limit triggered! They sent text instead of JSON.");
+    }
 
+    const data = await response.json();
+    rawOrbitalData = data; 
+    
     satelliteRecords = data
       .map((object) => {
         try {
-          return {
-            object,
-            satrec: satellite.json2satrec(object),
-          }
-        } catch (error) {
-          return null
-        }
-      })
-      .filter(Boolean);
+          return { object, satrec: satellite.json2satrec(object) }
+        } catch (error) { return null }
+      }).filter(Boolean);
 
-    console.log(`Successfully loaded ${satelliteRecords.length} LIVE satellite objects!`);
+    console.log(`SUCCESS: Loaded ${satelliteRecords.length} LIVE satellite objects!`);
+
   } catch (error) {
-    console.error('Failed to fetch live data:', error);
+    // 2. FALLBACK TRIGGERED! Load the local file so the app doesn't crash
+    console.warn(`API Error: ${error.message}`);
+    console.log("FALLING BACK TO LOCAL CACHE: Loading active-real.json...");
+
+    try {
+      const DATA_FILE = path.join(__dirname, 'active-real.json');
+      const rawData = fs.readFileSync(DATA_FILE, 'utf8');
+      const data = JSON.parse(rawData);
+
+      rawOrbitalData = data;
+      satelliteRecords = data
+        .map((object) => {
+          try {
+            return { object, satrec: satellite.json2satrec(object) }
+          } catch (err) { return null }
+        }).filter(Boolean);
+
+      console.log(`FALLBACK SUCCESS: Loaded ${satelliteRecords.length} offline satellite objects!`);
+    } catch (fallbackError) {
+      console.error("FATAL ERROR: Could not load live data OR local fallback file.", fallbackError);
+    }
   }
 }
 
