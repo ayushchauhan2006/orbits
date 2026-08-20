@@ -31,10 +31,8 @@ function Earth() {
       <sphereGeometry args={[5, 64, 64]} />
 
       <meshStandardMaterial
-  map={texture}
-  depthTest={true}
-  depthWrite={true}
-/>
+        map={texture}
+      />
     </mesh>
   )
 }
@@ -250,7 +248,6 @@ return (
 }
 
 function OrbitPath({ orbitalData }) {
-
   const points = useMemo(() => {
 
     if (!orbitalData) {
@@ -260,14 +257,10 @@ function OrbitPath({ orbitalData }) {
     const satrec =
       satellite.json2satrec(orbitalData)
 
-    if (!satrec) {
-      return []
-    }
-
-    // SGP4 mean motion
+    // SGP4 mean motion is radians/minute
     const meanMotion = satrec.no
 
-    if (!meanMotion || meanMotion <= 0) {
+    if (!meanMotion) {
       return []
     }
 
@@ -275,8 +268,7 @@ function OrbitPath({ orbitalData }) {
     const periodMinutes =
       (2 * Math.PI) / meanMotion
 
-    // More points = smoother orbit
-    const numberOfPoints = 720
+    const numberOfPoints = 360
 
     const earthRadius = 6
     const realEarthRadius = 6378.137
@@ -290,15 +282,13 @@ function OrbitPath({ orbitalData }) {
 
     for (
       let i = 0;
-      i < numberOfPoints;
+      i <= numberOfPoints;
       i++
     ) {
 
-      const fraction =
-        i / numberOfPoints
-
       const minutesFromNow =
-        periodMinutes * fraction
+        (periodMinutes * i) /
+        numberOfPoints
 
       const time =
         new Date(
@@ -306,10 +296,7 @@ function OrbitPath({ orbitalData }) {
           minutesFromNow * 60 * 1000
         )
 
-      // -----------------------------
-      // SGP4 PROPAGATION
-      // -----------------------------
-
+      // SGP4 propagation
       const state =
         satellite.propagate(
           satrec,
@@ -323,17 +310,10 @@ function OrbitPath({ orbitalData }) {
         continue
       }
 
-      // -----------------------------
-      // GMST
-      // -----------------------------
-
       const gmst =
         satellite.gstime(time)
 
-      // -----------------------------
       // ECI → ECF
-      // -----------------------------
-
       const positionEcf =
         satellite.eciToEcf(
           state.position,
@@ -347,172 +327,22 @@ function OrbitPath({ orbitalData }) {
       ])
     }
 
-    // -----------------------------
-    // CLOSE THE ORBIT
-    // -----------------------------
-
-    if (orbitPoints.length > 2) {
-
-      orbitPoints.push([
-        orbitPoints[0][0],
-        orbitPoints[0][1],
-        orbitPoints[0][2]
-      ])
-
-    }
-
     return orbitPoints
 
   }, [orbitalData])
 
-  if (points.length < 3) {
+  if (points.length < 2) {
     return null
   }
 
   return (
     <Line
-  points={points}
-  color="#00d9ff"
-  lineWidth={1.5}
-  closed={true}
-  depthTest={true}
-  depthWrite={false}
-/>
+      points={points}
+      color="#00d9ff"
+      lineWidth={1.5}
+    />
   )
 }
-
-function SatelliteSearch({
-  catalog,
-  selected,
-  onSelect,
-  label
-}) {
-
-  const [query, setQuery] =
-    useState('')
-
-  const [showResults, setShowResults] =
-    useState(false)
-
-  const results =
-    useMemo(() => {
-
-      if (!query.trim()) {
-        return []
-      }
-
-      const search =
-        query
-          .toLowerCase()
-          .trim()
-
-      return catalog
-        .filter((sat) => {
-
-          const name =
-            String(
-              sat.OBJECT_NAME || ''
-            ).toLowerCase()
-
-          const norad =
-            String(
-              sat.NORAD_CAT_ID || ''
-            )
-
-          return (
-            name.includes(search) ||
-            norad.includes(search)
-          )
-        })
-        .slice(0, 8)
-
-    }, [catalog, query])
-
-  const handleSelect = (satelliteObject) => {
-
-    onSelect(satelliteObject)
-
-    setQuery(
-      satelliteObject.OBJECT_NAME
-    )
-
-    setShowResults(false)
-  }
-
-  return (
-    <div className="satellite-search">
-
-      <label>
-        {label}
-      </label>
-
-      <input
-        type="text"
-        value={query}
-        placeholder="Search name or NORAD ID..."
-        onChange={(event) => {
-
-          setQuery(event.target.value)
-
-          setShowResults(true)
-        }}
-        onFocus={() => {
-          setShowResults(true)
-        }}
-      />
-
-      {showResults &&
-        query.trim() &&
-        results.length > 0 && (
-
-        <div className="search-results">
-
-          {results.map((sat) => (
-
-            <button
-              key={sat.NORAD_CAT_ID}
-              type="button"
-              onClick={() =>
-                handleSelect(sat)
-              }
-            >
-
-              <strong>
-                {sat.OBJECT_NAME}
-              </strong>
-
-              <span>
-                NORAD {sat.NORAD_CAT_ID}
-              </span>
-
-            </button>
-
-          ))}
-
-        </div>
-      )}
-
-      {selected && (
-        <div className="selected-satellite">
-
-          Selected:
-
-          <strong>
-            {selected.OBJECT_NAME}
-          </strong>
-
-          <span>
-            NORAD {selected.NORAD_CAT_ID}
-          </span>
-
-        </div>
-      )}
-
-    </div>
-  )
-}
-
-
 
 function ConjunctionAnalysis({
   orbitalData
@@ -956,13 +786,6 @@ function SpaceView() {
   useState([])
   const [orbitalData, setOrbitalData] =
   useState([])
-
-  const [selectedSatellites, setSelectedSatellites] =
-  useState([
-    null,
-    null
-  ])
-
   useEffect(() => {
   fetch('http://localhost:3000/api/orbital-data')
     .then((response) => {
@@ -978,9 +801,12 @@ function SpaceView() {
   console.log('Object 1:', data[0])
   console.log('Object 2:', data[1])
 
-  if (data.length > 0) {
-  setOrbitalData(data)
-}
+  if (data.length >= 2) {
+    setOrbitalData([
+      data[0],
+      data[1]
+    ])
+  }
 })
     .catch((error) => {
       console.error('Orbital data error:', error)
@@ -988,43 +814,6 @@ function SpaceView() {
 }, [])
   return (
   <section className="space-view">
-    <div className="satellite-search-panel">
-
-  <SatelliteSearch
-    catalog={orbitalData}
-    selected={selectedSatellites[0]}
-    label="SATELLITE 1"
-    onSelect={(sat) => {
-
-      setSelectedSatellites(
-        (previous) => [
-          sat,
-          previous[1]
-        ]
-      )
-
-      setSatelliteInfo([])
-    }}
-  />
-
-  <SatelliteSearch
-    catalog={orbitalData}
-    selected={selectedSatellites[1]}
-    label="SATELLITE 2"
-    onSelect={(sat) => {
-
-      setSelectedSatellites(
-        (previous) => [
-          previous[0],
-          sat
-        ]
-      )
-
-      setSatelliteInfo([])
-    }}
-  />
-
-</div>
 
     <h2>Space Visualization</h2>
 
@@ -1050,62 +839,38 @@ function SpaceView() {
 
        <Earth />
 
-{selectedSatellites[0] &&
- selectedSatellites[1] && (
-
+{orbitalData.length >= 2 && (
   <>
-
-    {/* SATELLITE 1 */}
-
     <OrbitPath
-      orbitalData={
-        selectedSatellites[0]
-      }
+      orbitalData={orbitalData[0]}
     />
 
     <RealSatellite
-      orbitalData={
-        selectedSatellites[0]
-      }
+      orbitalData={orbitalData[0]}
       objectIndex={0}
-      onTelemetryUpdate={
-        setSatelliteInfo
-      }
+      onTelemetryUpdate={setSatelliteInfo}
     />
 
 
-    {/* SATELLITE 2 */}
-
     <OrbitPath
-      orbitalData={
-        selectedSatellites[1]
-      }
+      orbitalData={orbitalData[1]}
     />
 
     <RealSatellite
-      orbitalData={
-        selectedSatellites[1]
-      }
+      orbitalData={orbitalData[1]}
       objectIndex={1}
-      onTelemetryUpdate={
-        setSatelliteInfo
-      }
+      onTelemetryUpdate={setSatelliteInfo}
     />
-
   </>
 )}
+
 <OrbitControls />
 
 </Canvas>
 
-{selectedSatellites[0] &&
- selectedSatellites[1] && (
-
-  <ConjunctionAnalysis
-    orbitalData={selectedSatellites}
-  />
-
-)}
+<ConjunctionAnalysis
+  orbitalData={orbitalData}
+/>
 
       {/* PUT THE TELEMETRY CODE HERE */}
 
