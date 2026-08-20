@@ -31,8 +31,10 @@ function Earth() {
       <sphereGeometry args={[5, 64, 64]} />
 
       <meshStandardMaterial
-        map={texture}
-      />
+  map={texture}
+  depthTest={true}
+  depthWrite={true}
+/>
     </mesh>
   )
 }
@@ -212,6 +214,7 @@ function RealSatellite({
 }
 
 function OrbitPath({ orbitalData }) {
+
   const points = useMemo(() => {
 
     if (!orbitalData) {
@@ -221,10 +224,14 @@ function OrbitPath({ orbitalData }) {
     const satrec =
       satellite.json2satrec(orbitalData)
 
-    // SGP4 mean motion is radians/minute
+    if (!satrec) {
+      return []
+    }
+
+    // SGP4 mean motion
     const meanMotion = satrec.no
 
-    if (!meanMotion) {
+    if (!meanMotion || meanMotion <= 0) {
       return []
     }
 
@@ -232,7 +239,8 @@ function OrbitPath({ orbitalData }) {
     const periodMinutes =
       (2 * Math.PI) / meanMotion
 
-    const numberOfPoints = 360
+    // More points = smoother orbit
+    const numberOfPoints = 720
 
     const earthRadius = 6
     const realEarthRadius = 6378.137
@@ -246,13 +254,15 @@ function OrbitPath({ orbitalData }) {
 
     for (
       let i = 0;
-      i <= numberOfPoints;
+      i < numberOfPoints;
       i++
     ) {
 
+      const fraction =
+        i / numberOfPoints
+
       const minutesFromNow =
-        (periodMinutes * i) /
-        numberOfPoints
+        periodMinutes * fraction
 
       const time =
         new Date(
@@ -260,7 +270,10 @@ function OrbitPath({ orbitalData }) {
           minutesFromNow * 60 * 1000
         )
 
-      // SGP4 propagation
+      // -----------------------------
+      // SGP4 PROPAGATION
+      // -----------------------------
+
       const state =
         satellite.propagate(
           satrec,
@@ -274,10 +287,17 @@ function OrbitPath({ orbitalData }) {
         continue
       }
 
+      // -----------------------------
+      // GMST
+      // -----------------------------
+
       const gmst =
         satellite.gstime(time)
 
+      // -----------------------------
       // ECI → ECF
+      // -----------------------------
+
       const positionEcf =
         satellite.eciToEcf(
           state.position,
@@ -291,20 +311,37 @@ function OrbitPath({ orbitalData }) {
       ])
     }
 
+    // -----------------------------
+    // CLOSE THE ORBIT
+    // -----------------------------
+
+    if (orbitPoints.length > 2) {
+
+      orbitPoints.push([
+        orbitPoints[0][0],
+        orbitPoints[0][1],
+        orbitPoints[0][2]
+      ])
+
+    }
+
     return orbitPoints
 
   }, [orbitalData])
 
-  if (points.length < 2) {
+  if (points.length < 3) {
     return null
   }
 
   return (
     <Line
-      points={points}
-      color="#00d9ff"
-      lineWidth={1.5}
-    />
+  points={points}
+  color="#00d9ff"
+  lineWidth={1.5}
+  closed={true}
+  depthTest={true}
+  depthWrite={false}
+/>
   )
 }
 
