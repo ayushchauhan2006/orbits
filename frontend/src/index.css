@@ -65,12 +65,38 @@ body {
   flex-direction: column;
   box-sizing: border-box;
 }
+.telemetry-container {
+  position: absolute;
+  top: 90px;
+  right: 20px;
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  width: min(560px, calc(100vw - 40px));
+
+  z-index: 100;
+}
+
+.satellite-telemetry {
+  position: relative;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 14px;
+
+  background: rgba(10, 15, 25, 0.94);
+
+  border: 1px solid rgba(0, 200, 255, 0.35);
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-family: monospace;
 }
 
 h1 {
