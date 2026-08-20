@@ -178,6 +178,22 @@ app.get('/api/satellites', (req, res) => {
 // START SERVER
 // ------------------------------------
 
+app.get('/api/orbital-data', (req, res) => {
+  try {
+    const rawData = fs.readFileSync(DATA_FILE, 'utf8')
+    const data = JSON.parse(rawData)
+
+    res.json(data)
+
+  } catch (error) {
+    console.error('Failed to load orbital data:', error)
+
+    res.status(500).json({
+      error: 'Failed to load orbital data'
+    })
+  }
+})
+
 app.listen(PORT, () => {
 
   console.log(
