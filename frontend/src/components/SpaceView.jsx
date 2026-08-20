@@ -308,6 +308,139 @@ function OrbitPath({ orbitalData }) {
   )
 }
 
+function SatelliteSearch({
+  catalog,
+  selected,
+  onSelect,
+  label
+}) {
+
+  const [query, setQuery] =
+    useState('')
+
+  const [showResults, setShowResults] =
+    useState(false)
+
+  const results =
+    useMemo(() => {
+
+      if (!query.trim()) {
+        return []
+      }
+
+      const search =
+        query
+          .toLowerCase()
+          .trim()
+
+      return catalog
+        .filter((sat) => {
+
+          const name =
+            String(
+              sat.OBJECT_NAME || ''
+            ).toLowerCase()
+
+          const norad =
+            String(
+              sat.NORAD_CAT_ID || ''
+            )
+
+          return (
+            name.includes(search) ||
+            norad.includes(search)
+          )
+        })
+        .slice(0, 8)
+
+    }, [catalog, query])
+
+  const handleSelect = (satelliteObject) => {
+
+    onSelect(satelliteObject)
+
+    setQuery(
+      satelliteObject.OBJECT_NAME
+    )
+
+    setShowResults(false)
+  }
+
+  return (
+    <div className="satellite-search">
+
+      <label>
+        {label}
+      </label>
+
+      <input
+        type="text"
+        value={query}
+        placeholder="Search name or NORAD ID..."
+        onChange={(event) => {
+
+          setQuery(event.target.value)
+
+          setShowResults(true)
+        }}
+        onFocus={() => {
+          setShowResults(true)
+        }}
+      />
+
+      {showResults &&
+        query.trim() &&
+        results.length > 0 && (
+
+        <div className="search-results">
+
+          {results.map((sat) => (
+
+            <button
+              key={sat.NORAD_CAT_ID}
+              type="button"
+              onClick={() =>
+                handleSelect(sat)
+              }
+            >
+
+              <strong>
+                {sat.OBJECT_NAME}
+              </strong>
+
+              <span>
+                NORAD {sat.NORAD_CAT_ID}
+              </span>
+
+            </button>
+
+          ))}
+
+        </div>
+      )}
+
+      {selected && (
+        <div className="selected-satellite">
+
+          Selected:
+
+          <strong>
+            {selected.OBJECT_NAME}
+          </strong>
+
+          <span>
+            NORAD {selected.NORAD_CAT_ID}
+          </span>
+
+        </div>
+      )}
+
+    </div>
+  )
+}
+
+
+
 function ConjunctionAnalysis({
   orbitalData
 }) {
@@ -750,6 +883,13 @@ function SpaceView() {
   useState([])
   const [orbitalData, setOrbitalData] =
   useState([])
+
+  const [selectedSatellites, setSelectedSatellites] =
+  useState([
+    null,
+    null
+  ])
+
   useEffect(() => {
   fetch('http://localhost:3000/api/orbital-data')
     .then((response) => {
@@ -765,12 +905,9 @@ function SpaceView() {
   console.log('Object 1:', data[0])
   console.log('Object 2:', data[1])
 
-  if (data.length >= 2) {
-    setOrbitalData([
-      data[0],
-      data[1]
-    ])
-  }
+  if (data.length > 0) {
+  setOrbitalData(data)
+}
 })
     .catch((error) => {
       console.error('Orbital data error:', error)
@@ -778,6 +915,43 @@ function SpaceView() {
 }, [])
   return (
   <section className="space-view">
+    <div className="satellite-search-panel">
+
+  <SatelliteSearch
+    catalog={orbitalData}
+    selected={selectedSatellites[0]}
+    label="SATELLITE 1"
+    onSelect={(sat) => {
+
+      setSelectedSatellites(
+        (previous) => [
+          sat,
+          previous[1]
+        ]
+      )
+
+      setSatelliteInfo([])
+    }}
+  />
+
+  <SatelliteSearch
+    catalog={orbitalData}
+    selected={selectedSatellites[1]}
+    label="SATELLITE 2"
+    onSelect={(sat) => {
+
+      setSelectedSatellites(
+        (previous) => [
+          previous[0],
+          sat
+        ]
+      )
+
+      setSatelliteInfo([])
+    }}
+  />
+
+</div>
 
     <h2>Space Visualization</h2>
 
@@ -803,38 +977,62 @@ function SpaceView() {
 
        <Earth />
 
-{orbitalData.length >= 2 && (
+{selectedSatellites[0] &&
+ selectedSatellites[1] && (
+
   <>
+
+    {/* SATELLITE 1 */}
+
     <OrbitPath
-      orbitalData={orbitalData[0]}
+      orbitalData={
+        selectedSatellites[0]
+      }
     />
 
     <RealSatellite
-      orbitalData={orbitalData[0]}
+      orbitalData={
+        selectedSatellites[0]
+      }
       objectIndex={0}
-      onTelemetryUpdate={setSatelliteInfo}
+      onTelemetryUpdate={
+        setSatelliteInfo
+      }
     />
 
 
+    {/* SATELLITE 2 */}
+
     <OrbitPath
-      orbitalData={orbitalData[1]}
+      orbitalData={
+        selectedSatellites[1]
+      }
     />
 
     <RealSatellite
-      orbitalData={orbitalData[1]}
+      orbitalData={
+        selectedSatellites[1]
+      }
       objectIndex={1}
-      onTelemetryUpdate={setSatelliteInfo}
+      onTelemetryUpdate={
+        setSatelliteInfo
+      }
     />
+
   </>
 )}
-
 <OrbitControls />
 
 </Canvas>
 
-<ConjunctionAnalysis
-  orbitalData={orbitalData}
-/>
+{selectedSatellites[0] &&
+ selectedSatellites[1] && (
+
+  <ConjunctionAnalysis
+    orbitalData={selectedSatellites}
+  />
+
+)}
 
       {/* PUT THE TELEMETRY CODE HERE */}
 
