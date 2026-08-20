@@ -308,6 +308,441 @@ function OrbitPath({ orbitalData }) {
   )
 }
 
+function ConjunctionAnalysis({
+  orbitalData
+}) {
+  const [analysis, setAnalysis] =
+    useState(null)
+
+  useEffect(() => {
+
+    if (
+      !orbitalData ||
+      orbitalData.length < 2
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    const calculateConjunction = () => {
+
+      const startTime = new Date()
+
+      // =================================
+      // CREATE SGP4 RECORDS
+      // =================================
+
+      const satrec1 =
+        satellite.json2satrec(
+          orbitalData[0]
+        )
+
+      const satrec2 =
+        satellite.json2satrec(
+          orbitalData[1]
+        )
+
+      // =================================
+      // CURRENT POSITION
+      // =================================
+
+      const currentState1 =
+        satellite.propagate(
+          satrec1,
+          startTime
+        )
+
+      const currentState2 =
+        satellite.propagate(
+          satrec2,
+          startTime
+        )
+
+      if (
+        !currentState1?.position ||
+        !currentState1?.velocity ||
+        !currentState2?.position ||
+        !currentState2?.velocity
+      ) {
+        return
+      }
+
+      // =================================
+      // CURRENT RELATIVE VALUES
+      // =================================
+
+      const currentDx =
+        currentState2.position.x -
+        currentState1.position.x
+
+      const currentDy =
+        currentState2.position.y -
+        currentState1.position.y
+
+      const currentDz =
+        currentState2.position.z -
+        currentState1.position.z
+
+      const currentDistance =
+        Math.sqrt(
+          currentDx ** 2 +
+          currentDy ** 2 +
+          currentDz ** 2
+        )
+
+      const currentDvx =
+        currentState2.velocity.x -
+        currentState1.velocity.x
+
+      const currentDvy =
+        currentState2.velocity.y -
+        currentState1.velocity.y
+
+      const currentDvz =
+        currentState2.velocity.z -
+        currentState1.velocity.z
+
+      const currentRelativeVelocity =
+        Math.sqrt(
+          currentDvx ** 2 +
+          currentDvy ** 2 +
+          currentDvz ** 2
+        )
+
+      // =================================
+      // SEARCH FUTURE
+      // =================================
+
+      // Search next 60 minutes
+      const predictionMinutes = 60
+
+      // Check every 5 seconds initially
+      const stepSeconds = 5
+
+      let closestDistance =
+        currentDistance
+
+      let closestTime =
+        startTime
+
+      let closestRelativeVelocity =
+        currentRelativeVelocity
+
+      // =================================
+      // PROPAGATE BOTH OBJECTS
+      // =================================
+
+      for (
+        let seconds = stepSeconds;
+        seconds <= predictionMinutes * 60;
+        seconds += stepSeconds
+      ) {
+
+        const futureTime =
+          new Date(
+            startTime.getTime() +
+            seconds * 1000
+          )
+
+        const state1 =
+          satellite.propagate(
+            satrec1,
+            futureTime
+          )
+
+        const state2 =
+          satellite.propagate(
+            satrec2,
+            futureTime
+          )
+
+        if (
+          !state1?.position ||
+          !state1?.velocity ||
+          !state2?.position ||
+          !state2?.velocity
+        ) {
+          continue
+        }
+
+        // -----------------------------
+        // RELATIVE POSITION
+        // -----------------------------
+
+        const dx =
+          state2.position.x -
+          state1.position.x
+
+        const dy =
+          state2.position.y -
+          state1.position.y
+
+        const dz =
+          state2.position.z -
+          state1.position.z
+
+        const distance =
+          Math.sqrt(
+            dx ** 2 +
+            dy ** 2 +
+            dz ** 2
+          )
+
+        // -----------------------------
+        // RELATIVE VELOCITY
+        // -----------------------------
+
+        const dvx =
+          state2.velocity.x -
+          state1.velocity.x
+
+        const dvy =
+          state2.velocity.y -
+          state1.velocity.y
+
+        const dvz =
+          state2.velocity.z -
+          state1.velocity.z
+
+        const relativeVelocity =
+          Math.sqrt(
+            dvx ** 2 +
+            dvy ** 2 +
+            dvz ** 2
+          )
+
+        // -----------------------------
+        // CHECK FOR NEW MINIMUM
+        // -----------------------------
+
+        if (
+          distance <
+          closestDistance
+        ) {
+
+          closestDistance =
+            distance
+
+          closestTime =
+            futureTime
+
+          closestRelativeVelocity =
+            relativeVelocity
+        }
+      }
+
+      // =================================
+      // TIME TO CLOSEST APPROACH
+      // =================================
+
+      const timeToTCA =
+        Math.max(
+          0,
+          (closestTime.getTime() -
+            startTime.getTime()) /
+          1000
+        )
+
+      // =================================
+      // RISK STATUS
+      // =================================
+
+      let risk = 'LOW'
+
+      if (closestDistance < 1) {
+        risk = 'CRITICAL'
+      }
+      else if (closestDistance < 10) {
+        risk = 'HIGH'
+      }
+      else if (closestDistance < 50) {
+        risk = 'WARNING'
+      }
+
+      // =================================
+      // UPDATE UI
+      // =================================
+
+      if (!cancelled) {
+
+        setAnalysis({
+
+          currentDistance,
+
+          currentRelativeVelocity,
+
+          closestDistance,
+
+          closestRelativeVelocity,
+
+          closestTime,
+
+          timeToTCA,
+
+          risk,
+
+          timestamp:
+            new Date()
+        })
+      }
+    }
+
+    calculateConjunction()
+
+    // Recalculate every 10 seconds
+    const interval =
+      setInterval(
+        calculateConjunction,
+        10000
+      )
+
+    return () => {
+
+      cancelled = true
+
+      clearInterval(interval)
+    }
+
+  }, [orbitalData])
+
+  if (!analysis) {
+    return null
+  }
+
+  // =================================
+  // FORMAT TIME TO TCA
+  // =================================
+
+  const totalSeconds =
+    Math.round(
+      analysis.timeToTCA
+    )
+
+  const minutes =
+    Math.floor(
+      totalSeconds / 60
+    )
+
+  const seconds =
+    totalSeconds % 60
+
+  const timeToTCA =
+    `${minutes}m ${seconds
+      .toString()
+      .padStart(2, '0')}s`
+
+  return (
+    <div className="conjunction-panel">
+
+      <h3>
+        CONJUNCTION ANALYSIS
+      </h3>
+
+      <div className="conjunction-object">
+        <span>OBJECT 1</span>
+
+        <strong>
+          {orbitalData[0].OBJECT_NAME}
+        </strong>
+      </div>
+
+      <div className="conjunction-object">
+        <span>OBJECT 2</span>
+
+        <strong>
+          {orbitalData[1].OBJECT_NAME}
+        </strong>
+      </div>
+
+      <hr />
+
+      <h4>
+        CURRENT
+      </h4>
+
+      <div className="conjunction-row">
+        <span>Separation</span>
+
+        <strong>
+          {analysis.currentDistance.toFixed(3)}
+          {' '}km
+        </strong>
+      </div>
+
+      <div className="conjunction-row">
+        <span>Relative Velocity</span>
+
+        <strong>
+          {analysis.currentRelativeVelocity.toFixed(5)}
+          {' '}km/s
+        </strong>
+      </div>
+
+      <hr />
+
+      <h4>
+        CLOSEST APPROACH
+      </h4>
+
+      <div className="conjunction-row">
+        <span>Miss Distance</span>
+
+        <strong>
+          {analysis.closestDistance.toFixed(3)}
+          {' '}km
+        </strong>
+      </div>
+
+      <div className="conjunction-row">
+        <span>Time to TCA</span>
+
+        <strong>
+          {timeToTCA}
+        </strong>
+      </div>
+
+      <div className="conjunction-row">
+        <span>TCA</span>
+
+        <strong>
+          {analysis.closestTime
+            .toLocaleTimeString()}
+        </strong>
+      </div>
+
+      <div className="conjunction-row">
+        <span>Relative Velocity @ TCA</span>
+
+        <strong>
+          {analysis.closestRelativeVelocity
+            .toFixed(5)}
+          {' '}km/s
+        </strong>
+      </div>
+
+      <hr />
+
+      <div className="conjunction-row">
+        <span>Risk</span>
+
+        <strong className={
+          `risk-${analysis.risk.toLowerCase()}`
+        }>
+          {analysis.risk}
+        </strong>
+      </div>
+
+      <div className="conjunction-updated">
+        ● LIVE&nbsp;&nbsp;
+        {analysis.timestamp
+          .toLocaleTimeString()}
+      </div>
+
+    </div>
+  )
+}
+
 function SpaceView() {
   const [selectedSatellite, setSelectedSatellite] =
     useState(null)
@@ -395,8 +830,11 @@ function SpaceView() {
 
 <OrbitControls />
 
-      </Canvas>
+</Canvas>
 
+<ConjunctionAnalysis
+  orbitalData={orbitalData}
+/>
 
       {/* PUT THE TELEMETRY CODE HERE */}
 

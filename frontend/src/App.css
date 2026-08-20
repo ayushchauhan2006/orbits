@@ -776,26 +776,7 @@ button {
   }
 }
 
-.satellite-telemetry {
-  position: absolute;
-  top: 90px;
-  right: 25px;
 
-  width: 280px;
-  padding: 18px;
-
-  background: rgba(10, 15, 25, 0.92);
-
-  border: 1px solid rgba(0, 200, 255, 0.35);
-
-  border-radius: 10px;
-
-  color: white;
-
-  font-family: monospace;
-
-  z-index: 10;
-}
 
 .satellite-telemetry h3 {
   margin-top: 0;
