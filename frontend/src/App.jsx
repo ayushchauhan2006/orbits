@@ -15,6 +15,37 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1)
 
   const ITEMS_PER_PAGE = 50
+  // --------------------------------
+  // LOAD CONJUNCTION RISKS (STEP 3)
+  // --------------------------------
+  const [riskData, setRiskData] = useState([])
+  const [loadingRisks, setLoadingRisks] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState('')
+
+  const loadRisks = async () => {
+    try {
+      setLoadingRisks(true)
+      // Hit the spatial partitioning algorithm endpoint!
+      const response = await fetch('http://localhost:3000/api/conjunction-risks')
+      
+      if (!response.ok) throw new Error('Failed to fetch risks')
+      
+      const data = await response.json()
+      setRiskData(data.risks || [])
+      setLastUpdated(new Date(data.timestamp).toLocaleTimeString())
+    } catch (error) {
+      console.error('Risk fetch error:', error)
+    } finally {
+      setLoadingRisks(false)
+    }
+  }
+
+  // Automatically fetch the risks whenever the Debris page opens
+  useEffect(() => {
+    if (activePage === 'Debris') {
+      loadRisks()
+    }
+  }, [activePage])
 
   // --------------------------------
   // LOAD REAL SATELLITE DATA
@@ -511,51 +542,74 @@ function App() {
 
 
         {/* ========================================
-            DEBRIS
+            DEBRIS / CONJUNCTION DASHBOARD
             ======================================== */}
 
         {activePage === 'Debris' && (
-
-          <section className="page simple-page">
-
-            <div className="page-kicker">
-              ORBITAL ENVIRONMENT
-            </div>
-
-            <h1>
-              Debris
-            </h1>
-
-            <p>
-              Orbital debris monitoring will be
-              integrated here.
-            </p>
-
-            <div className="feature-card">
-
-              <div className="feature-icon">
-                ◇
-              </div>
-
+          <section className="page">
+            <div className="page-header">
               <div>
-
-                <h3>
-                  Debris Tracking
-                </h3>
-
-                <p>
-                  This section will use dedicated
-                  debris classification data rather
-                  than incorrectly labeling every
-                  catalog object as debris.
-                </p>
-
+                <div className="page-kicker">SPATIAL ANALYSIS</div>
+                <h1>Top 10 Collision Risks</h1>
+                <p>Live prediction of closest orbital approaches using 3D spatial partitioning.</p>
               </div>
-
+              
+              <div className="catalog-count">
+                <span>LAST UPDATED</span>
+                <strong>{lastUpdated || 'Loading...'}</strong>
+              </div>
             </div>
 
+            {loadingRisks ? (
+              <div className="loading">Running spatial collision analysis...</div>
+            ) : (
+              <div className="satellite-table-wrapper">
+                <table className="satellite-table">
+                  <thead>
+                    <tr>
+                      <th>RISK LEVEL</th>
+                      <th>OBJECT 1</th>
+                      <th>OBJECT 2</th>
+                      <th>MISS DISTANCE</th>
+                      <th>REL. VELOCITY</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Slicing the array to strictly show the Top 10 */}
+                    {riskData.slice(0, 10).map((risk, index) => (
+                      <tr key={index}>
+                        <td>
+                          <strong style={{
+                            color: risk.riskLevel === 'CRITICAL' ? '#ff0000' : '#ffb703'
+                          }}>
+                            {risk.riskLevel}
+                          </strong>
+                        </td>
+                        <td className="satellite-name">
+                          {risk.object1} <br/>
+                          <span style={{fontSize: '0.8em', color: '#888'}}>ID: {risk.norad1}</span>
+                        </td>
+                        <td className="satellite-name">
+                          {risk.object2} <br/>
+                          <span style={{fontSize: '0.8em', color: '#888'}}>ID: {risk.norad2}</span>
+                        </td>
+                        <td>
+                          {risk.missDistanceKm.toFixed(2)} km
+                        </td>
+                        <td>
+                          {risk.relativeVelocityKmS.toFixed(3)} km/s
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {riskData.length === 0 && (
+                  <div className="no-results">No high-risk conjunctions detected in current sectors.</div>
+                )}
+              </div>
+            )}
           </section>
-
         )}
 
 
