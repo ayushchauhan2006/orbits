@@ -10,41 +10,50 @@ const PORT = 3000
 app.use(cors())
 
 // ------------------------------------
-// LOAD SATELLITE DATA ONCE
+// FETCH LIVE DATA FROM CELESTRAK
 // ------------------------------------
+let satelliteRecords = [];
+let rawOrbitalData = []; // We will save a copy for the frontend to use
 
-const DATA_FILE = path.join(__dirname, 'active-real.json')
+async function fetchLiveData() {
+  try {
+    console.log("Fetching live catalog from Celestrak... This might take a few seconds.");
+    
+    // This downloads the live data directly from the space database
+    const response = await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json');
+    const data = await response.json();
+    
+    rawOrbitalData = data; 
 
-let satelliteRecords = []
-
-try {
-  const rawData = fs.readFileSync(DATA_FILE, 'utf8')
-  const data = JSON.parse(rawData)
-
-  satelliteRecords = data
-    .map((object) => {
-      try {
-        return {
-          object,
-          satrec: satellite.json2satrec(object),
+    satelliteRecords = data
+      .map((object) => {
+        try {
+          return {
+            object,
+            satrec: satellite.json2satrec(object),
+          }
+        } catch (error) {
+          return null
         }
-      } catch (error) {
-        return null
-      }
-    })
-    .filter(Boolean)
+      })
+      .filter(Boolean);
 
-  console.log(
-    `Loaded ${satelliteRecords.length} satellite objects`
-  )
-
-} catch (error) {
-  console.error(
-    'Failed to load satellite data:',
-    error
-  )
+    console.log(`Successfully loaded ${satelliteRecords.length} LIVE satellite objects!`);
+  } catch (error) {
+    console.error('Failed to fetch live data:', error);
+  }
 }
 
+// Start the download as soon as the server turns on
+fetchLiveData();
+// ------------------------------------
+// AUTOMATICALLY REFRESH EVERY 2 HOURS
+// ------------------------------------
+// 2 hours = 7,200,000 milliseconds
+setInterval(() => {
+  console.log("2-hour timer triggered: Refreshing orbital data...");
+  fetchLiveData();
+}, 2 * 60 * 60 * 1000);
 // ------------------------------------
 // GET CURRENT SATELLITE POSITIONS
 // ------------------------------------
@@ -179,21 +188,115 @@ app.get('/api/satellites', (req, res) => {
 // ------------------------------------
 
 app.get('/api/orbital-data', (req, res) => {
+  // Just send the live data we downloaded earlier!
+  res.json(rawOrbitalData);
+})
+// ------------------------------------
+// CONJUNCTION RISK ENGINE (O(N) Spatial Grid)
+// ------------------------------------
+app.get('/api/conjunction-risks', (req, res) => {
   try {
-    const rawData = fs.readFileSync(DATA_FILE, 'utf8')
-    const data = JSON.parse(rawData)
+    const now = new Date();
+    const gmst = satellite.gstime(now);
+    
+    // 1. The Hash Map to hold our 3D Grid Sectors
+    const spatialGrid = new Map();
+    const GRID_SIZE_KM = 50; // Each sector is a 50x50x50 km box
 
-    res.json(data)
+    const activeSatellites = [];
+
+    // 2. Propagate all satellites and assign them to a sector
+    for (const item of satelliteRecords) {
+      try {
+        const state = satellite.propagate(item.satrec, now);
+
+        if (!state || !state.position || typeof state.position.x !== 'number') {
+          continue;
+        }
+
+        // Use ECI coordinates (in km)
+        const { x, y, z } = state.position;
+        const velocity = state.velocity;
+
+        // Create a unique String key for the sector (e.g., "150_-42_12")
+        const gridX = Math.floor(x / GRID_SIZE_KM);
+        const gridY = Math.floor(y / GRID_SIZE_KM);
+        const gridZ = Math.floor(z / GRID_SIZE_KM);
+        const sectorKey = `${gridX}_${gridY}_${gridZ}`;
+
+        const satData = {
+          id: item.object.NORAD_CAT_ID,
+          name: item.object.OBJECT_NAME,
+          x, y, z,
+          vx: velocity.x, vy: velocity.y, vz: velocity.z
+        };
+
+        // Add satellite to its specific grid sector
+        if (!spatialGrid.has(sectorKey)) {
+          spatialGrid.set(sectorKey, []);
+        }
+        spatialGrid.get(sectorKey).push(satData);
+
+      } catch (error) {
+        // Skip bad data
+      }
+    }
+
+    // 3. Find close approaches ONLY within the same sectors
+    const highRiskPairs = [];
+
+    for (const [sector, occupants] of spatialGrid.entries()) {
+      // If a sector has 2 or more satellites, they are extremely close!
+      if (occupants.length >= 2) {
+        
+        // Compare the few satellites inside this specific sector
+        for (let i = 0; i < occupants.length; i++) {
+          for (let j = i + 1; j < occupants.length; j++) {
+            const sat1 = occupants[i];
+            const sat2 = occupants[j];
+
+            // Calculate exact distance using 3D Pythagorean theorem
+            const dx = sat2.x - sat1.x;
+            const dy = sat2.y - sat1.y;
+            const dz = sat2.z - sat1.z;
+            const distanceKm = Math.sqrt(dx**2 + dy**2 + dz**2);
+
+            // Calculate relative velocity
+            const dvx = sat2.vx - sat1.vx;
+            const dvy = sat2.vy - sat1.vy;
+            const dvz = sat2.vz - sat1.vz;
+            const relativeVelocity = Math.sqrt(dvx**2 + dvy**2 + dvz**2);
+
+            highRiskPairs.push({
+              object1: sat1.name,
+              norad1: sat1.id,
+              object2: sat2.name,
+              norad2: sat2.id,
+              missDistanceKm: distanceKm,
+              relativeVelocityKmS: relativeVelocity,
+              riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
+            });
+          }
+        }
+      }
+    }
+
+    // 4. Sort by closest distance and return the Top 20 worst risks
+    highRiskPairs.sort((a, b) => a.missDistanceKm - b.missDistanceKm);
+    const topRisks = highRiskPairs.slice(0, 20);
+
+    res.json({
+      totalObjectsProcessed: satelliteRecords.length,
+      highRiskCount: topRisks.length,
+      risks: topRisks,
+      timestamp: now.toISOString()
+    });
 
   } catch (error) {
-    console.error('Failed to load orbital data:', error)
-
-    res.status(500).json({
-      error: 'Failed to load orbital data'
-    })
+    console.error('Conjunction analysis error:', error);
+    res.status(500).json({ error: 'Failed to run spatial analysis' });
   }
-})
-
+});
 app.listen(PORT, () => {
 
   console.log(

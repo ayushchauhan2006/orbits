@@ -43,6 +43,7 @@ function RealSatellite({
   onTelemetryUpdate
 }) {
   const satelliteRef = useRef(null)
+  const bubbleRef = useRef(null)
 
   // IMPORTANT:
   // This must be here, NOT inside useFrame()
@@ -151,7 +152,31 @@ function RealSatellite({
       positionEcf.z * scale,
       -positionEcf.y * scale
     )
+    // ==========================================
+    // NEW: DYNAMIC UNCERTAINTY CALCULATOR
+    // ==========================================
+    if (bubbleRef.current && orbitalData.EPOCH) {
+      // 1. Calculate time difference in days
+      const epochTime = new Date(orbitalData.EPOCH).getTime()
+      const nowTime = now.getTime()
+      const daysSinceEpoch = Math.max(0, (nowTime - epochTime) / (1000 * 60 * 60 * 24))
 
+      // 2. Physics Model: Base Error + (Error Growth Rate * Days)
+      const baseErrorKm = 1.5
+      const errorGrowthPerDayKm = 2.0
+      const currentErrorKm = baseErrorKm + (errorGrowthPerDayKm * daysSinceEpoch)
+
+      // 3. Convert physics radius to 3D Scene Scale
+      const visualExaggeration = 80 // Bumped this up from 40 so it's easier to see
+      let finalRadius = currentErrorKm * scale * visualExaggeration
+
+      // NEW: Prevent the bubble from hiding inside the core satellite
+      // The core is size 0.15, so we force the bubble to always be at least 0.3
+      finalRadius = Math.max(0.3, finalRadius)
+
+      // 4. Apply scale dynamically to the bubble
+      bubbleRef.current.scale.set(finalRadius, finalRadius, finalRadius)
+    }
     // -----------------------------
     // TELEMETRY UPDATE
     // -----------------------------
@@ -194,20 +219,31 @@ function RealSatellite({
     }
   })
 
-  return (
-    <mesh ref={satelliteRef}>
+return (
+    <group ref={satelliteRef}>
+      
+      {/* 1. The Estimated Position (Core) */}
+      <mesh>
+        <sphereGeometry args={[0.15, 16, 16]} />
+        <meshStandardMaterial
+          color="#ffb703" /* Matches the orange/yellow in your screenshot */
+          emissive="#ffb703"
+          emissiveIntensity={1.5}
+        />
+</mesh>
 
-      <sphereGeometry
-        args={[0.15, 16, 16]}
-      />
-
-      <meshStandardMaterial
-        color="red"
-        emissive="red"
-        emissiveIntensity={2}
-      />
-
-    </mesh>
+      {/* 2. The Uncertainty Zone (Covariance Bubble) */}
+      <mesh ref={bubbleRef}> {/* <--- ADDED REF HERE */}
+        <sphereGeometry args={[1, 32, 32]} /> {/* <--- CHANGED RADIUS TO 1 */}
+        <meshStandardMaterial
+          color="#ff0000"
+          transparent={true}
+          opacity={0.25} 
+          depthWrite={false} 
+        />
+      </mesh>
+      
+    </group>
   )
 }
 
