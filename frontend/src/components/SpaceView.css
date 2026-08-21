@@ -12,4 +12,14 @@
 .telemetry-card p { display: flex; justify-content: space-between; }
 .telemetry-card p b { color: #edf7fb; font-weight: 500; }
 .telemetry-card em { display: block; border-top: 1px solid #ffffff12; padding-top: 9px; margin-top: 11px; color: #55e6b2; font: 9px 'DM Mono'; font-style: normal; }
+.mission-rail, .analysis-rail { transition: padding .2s ease, background .2s ease; }
+.mission-rail.collapsed, .analysis-rail.collapsed { min-width: 0; padding: 0; overflow: visible; }
+.mission-rail.collapsed .rail-content, .analysis-rail.collapsed .rail-content { display: none; }
+.collapse-toggle { position: absolute; z-index: 12; top: 18px; width: 28px; height: 31px; border: 1px solid #4e8aa4; border-radius: 4px; background: #10273a; color: #d5f4ff; font-size: 20px; line-height: 1; }
+.collapse-toggle.left { right: 9px; }.collapse-toggle.right { left: 9px; }
+.analysis-rail .metric strong { font-size: 24px; }
+.telemetry-card { margin-top: 12px; padding: 17px 14px; border: 1px solid #2a617e; border-radius: 7px; background: #102131; }
+.telemetry-card > div { font-size: 15px; }.telemetry-card p { font-size: 11px; }.telemetry-card section { gap: 9px; font-size: 11px; }.telemetry-card section span { display: flex; justify-content: space-between; gap: 14px; }.telemetry-card section b { font-size: 12px; }
+.debris-watch-panel { margin-top:23px; padding:15px; border:1px solid #2a647f; border-radius:6px; background:#0d2332; }.debris-watch-panel h3 { margin:0 0 12px; color:#82c8df; font:11px 'DM Mono'; letter-spacing:1px; }.debris-watch-panel p { margin:0; color:#9bb8c8; font-size:12px; line-height:1.5; }
+.watch-result { display:grid; grid-template-columns:1fr auto; gap:7px 12px; padding:11px 0; border-top:1px solid #ffffff16; color:#cfe6ee; font-size:12px; }.watch-result:first-of-type { border-top:0; }.watch-result div { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.watch-result i { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; }.watch-result>b { color:#61e4d0; font:11px 'DM Mono'; }.watch-result span { grid-column:1 / -1; color:#8caebe; font-size:11px; }.watch-result.alert>b { color:#ff7880; }.watch-result.alert span { color:#ffb5b9; }
 @media (max-width: 1120px) { .resize-handle { display: none; } }

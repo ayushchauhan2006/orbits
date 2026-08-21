@@ -1,0 +1,12 @@
+:root { color:#eff8ff; background:#091421; }
+.app-shell { background:radial-gradient(circle at 60% 10%,#193650 0,#091421 42%); }
+.topbar { background:#0b1827ee; border-bottom-color:#ffffff1f; }
+.mission-rail,.analysis-rail { position:relative; background:#0b1a2ae8; }
+.eyebrow,.stage-top,.panel-heading,.telemetry-heading { font-size:12px; }
+.mission-copy { font-size:15px; color:#b2c6d6; }
+.object-picker label,.catalog-live { font-size:12px; }
+.object-picker input { font-size:14px; }
+.analysis-empty { font-size:14px; line-height:1.7; color:#b1c8d7; }
+.screen-sort { display:flex; align-items:center; gap:8px; margin:0 0 17px; color:#86a9bc; font:11px 'DM Mono'; }.screen-sort button { border:1px solid #31576c; border-radius:4px; background:#0b1b29; color:#a9c6d4; padding:8px 10px; }.screen-sort button.active { color:#effbff; border-color:#58bfe8; background:#163348; }.screening-table .table-head,.screening-table .table-row { grid-template-columns:2.2fr .8fr .8fr .8fr 1fr; }.priority-high{color:#ff6b72;font-weight:700}.priority-medium{color:#ffc36c;font-weight:700}.priority-low{color:#61d4ff;font-weight:700}.priority-very-low{color:#8fa8b7;font-weight:700}
+.debris-table .table-head,.debris-table .table-row { grid-template-columns:1.45fr 1.45fr .8fr .8fr .9fr; }.debris-table .table-row strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.screening-error { margin:0 0 16px; padding:12px 14px; border:1px solid #c96a55; background:#4e231b55; color:#ffd0bd; font-size:13px; }
