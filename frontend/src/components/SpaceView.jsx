@@ -75,7 +75,8 @@ function screenPair(first, second) {
 
 function Search({ catalog, label, selected, accent, onSelect }) {
   const [term, setTerm] = useState('')
-  const results = useMemo(() => term.trim() ? catalog.filter(item => `${item.OBJECT_NAME} ${item.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
+  // NEW: Added item.OBJECT_TYPE === 'ACTIVE' to the filter so debris doesn't show in search
+  const results = useMemo(() => term.trim() ? catalog.filter(item => item.OBJECT_TYPE === 'ACTIVE' && `${item.OBJECT_NAME} ${item.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
   return <div className="object-picker"><label>{label}</label><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Name or NORAD ID" />{results.length > 0 && <div className="picker-results">{results.map(item => <button key={item.NORAD_CAT_ID} onClick={() => { onSelect(item); setTerm(item.OBJECT_NAME) }}><span>{item.OBJECT_NAME}</span><small>NORAD {item.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: accent }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
@@ -85,7 +86,31 @@ const signed = value => `${value < 0 ? '−' : ''}${Math.abs(value).toFixed(2)} 
 function InspectionCard({ item, color }) {
   return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div>
 }
+// --- NEW DEBRIS RENDERERS ---
+function DebrisDot({ data }) {
+  const ref = useRef()
+  const satrec = useMemo(() => satellite.json2satrec(data), [data])
+  useFrame(() => {
+    const state = satellite.propagate(satrec, new Date())
+    if (state?.position && ref.current) ref.current.position.set(...toScene(state.position))
+  })
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.015, 4, 4]} />
+      <meshBasicMaterial color="#ff2222" transparent opacity={0.6} />
+    </mesh>
+  )
+}
 
+function DebrisSwarm({ catalog }) {
+  // Grab exactly 200 pieces of debris to keep the framerate buttery smooth
+  const debris = useMemo(() => catalog.filter(c => c.OBJECT_TYPE === 'DEBRIS').slice(0, 500), [catalog])
+  return (
+    <group>
+      {debris.map((item, i) => <DebrisDot key={item.NORAD_CAT_ID || i} data={item} />)}
+    </group>
+  )
+}
 export default function SpaceView() {
   const [catalog, setCatalog] = useState([]), [selected, setSelected] = useState([null, null]), [inspection, setInspection] = useState(null), [screening, setScreening] = useState(null), [error, setError] = useState(''), [panelWidth, setPanelWidth] = useState(500), [resizing, setResizing] = useState(false)
   useEffect(() => { fetch(`${API}/api/orbital-data`).then(r => r.ok ? r.json() : Promise.reject()).then(setCatalog).catch(() => setError('Catalog service is offline. Start the backend on port 3000.')) }, [])
@@ -94,7 +119,8 @@ export default function SpaceView() {
   const setObject = (index, item) => { setSelected(previous => previous.map((x, i) => i === index ? item : x)); setInspection(null) }
   return <section className="mission-view" style={{ gridTemplateColumns: `320px minmax(300px, 1fr) ${panelWidth}px` }}>
     <aside className="mission-rail"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p><div className="picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} accent={palette[0]} onSelect={item => setObject(0, item)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} accent={palette[1]} onSelect={item => setObject(1, item)} /></div>{error ? <p className="service-error">{error}</p> : <div className="catalog-live"><b /> {catalog.length ? `${catalog.length.toLocaleString()} catalogued objects loaded` : 'Connecting to catalog…'}</div>}<div className="method-note"><strong>Screening context</strong><p>Paths use SGP4 propagation. Results are visual indicators, not operational collision-avoidance advice.</p></div></aside>
-    <div className="orbital-stage"><div className="stage-top"><span>EARTH-CENTERED INERTIAL VIEW</span><span>DRAG TO ORBIT · SCROLL TO ZOOM</span></div><Canvas camera={{ position: [7.8, 4.2, 8.4], fov: 42 }} dpr={[1, 1.7]}><color attach="background" args={['#020611']} /><ambientLight intensity={0.45} /><pointLight position={[9, 6, 7]} intensity={38} color="#90d9ff" /><Stars radius={80} depth={40} count={2700} factor={2.3} saturation={0} fade speed={0.25} /><Earth />{selected.map((item, index) => item && <group key={item.NORAD_CAT_ID}><Orbit data={item} color={palette[index]} /><SatelliteMarker data={item} color={palette[index]} onInspect={value => setInspection({ ...value, color: palette[index] })} /></group>)}<OrbitControls enablePan={false} minDistance={4.8} maxDistance={20} /></Canvas>{!selected[0] && <div className="empty-stage"><span>01</span><strong>Select objects to begin</strong><p>The visualisation will plot orbital paths in a stable inertial reference frame.</p></div>}<div className="stage-legend"><span><i className="cyan" /> OBJECT A</span><span><i className="amber" /> OBJECT B</span><span><i className="orbit-key" /> PROPAGATED PATH</span></div></div>
+    <div className="orbital-stage"><div className="stage-top"><span>EARTH-CENTERED INERTIAL VIEW</span><span>DRAG TO ORBIT · SCROLL TO ZOOM</span></div><Canvas camera={{ position: [7.8, 4.2, 8.4], fov: 42 }} dpr={[1, 1.7]}><color attach="background" args={['#020611']} /><ambientLight intensity={0.45} /><pointLight position={[9, 6, 7]} intensity={38} color="#90d9ff" /><Stars radius={80} depth={40} count={2700} factor={2.3} saturation={0} fade speed={0.25} /><Earth /> {/* NEW: The Cosmos Debris Cloud */}
+          <DebrisSwarm catalog={catalog} /> {selected.map((item, index) => item && <group key={item.NORAD_CAT_ID}><Orbit data={item} color={palette[index]} /><SatelliteMarker data={item} color={palette[index]} onInspect={value => setInspection({ ...value, color: palette[index] })} /></group>)}<OrbitControls enablePan={false} minDistance={4.8} maxDistance={20} /></Canvas>{!selected[0] && <div className="empty-stage"><span>01</span><strong>Select objects to begin</strong><p>The visualisation will plot orbital paths in a stable inertial reference frame.</p></div>}<div className="stage-legend"><span><i className="cyan" /> OBJECT A</span><span><i className="amber" /> OBJECT B</span><span><i className="orbit-key" /> PROPAGATED PATH</span></div></div>
     <aside className="analysis-rail"><button className="resize-handle" title="Drag to resize analysis panel" onPointerDown={e => { e.preventDefault(); setResizing(true) }}><span /></button><div className="panel-heading"><span>CONJUNCTION ANALYSIS</span><b>24 HORIZON</b></div>{screening ? <><div className="pair-names"><span>OBJECT 1 <b>{selected[0].OBJECT_NAME}</b></span><span>OBJECT 2 <b>{selected[1].OBJECT_NAME}</b></span></div><h4>CURRENT</h4><Metric label="Separation" value={`${screening.currentDistance.toFixed(2)} km`} /><Metric label="Relative velocity" value={`${screening.currentSpeed.toFixed(4)} km/s`} /><h4>CLOSEST APPROACH</h4><Metric label="Miss distance" value={`${screening.distance.toFixed(2)} km`} /><Metric label="Time to TCA" value={`${screening.hours.toFixed(1)} h`} hint={screening.time.toLocaleTimeString()} /><Metric label="Relative velocity @ TCA" value={`${screening.relativeSpeed.toFixed(4)} km/s`} /><div className="screening-state"><span>SCREENING STATUS</span><strong className={screening.distance < 10 ? 'attention' : ''}>{screening.distance < 10 ? 'REVIEW RECOMMENDED' : 'MONITOR'}</strong><p>Thresholds flag a closer look; they do not estimate collision probability.</p></div></> : <div className="analysis-empty">Choose both objects to calculate a 24-hour minimum-separation screening window.</div>}<div className="telemetry-heading">INFORMATION · CLICK A SATELLITE</div>{inspection ? <InspectionCard item={inspection} color={inspection.color} /> : <p className="analysis-empty">Individual data stays hidden until you click a glowing satellite marker.</p>}</aside>
   </section>
 }
