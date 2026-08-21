@@ -265,18 +265,28 @@ app.get('/api/conjunction-risks', (req, res) => {
       }
     }
 
-    // 3. Find close approaches ONLY within the same sectors
+    // 3. Screen each sector and its 26 neighbours. Restricting comparisons to
+    // the same cell misses objects separated by a grid boundary.
     const highRiskPairs = [];
+    const seenPairs = new Set();
 
     for (const [sector, occupants] of spatialGrid.entries()) {
-      // If a sector has 2 or more satellites, they are extremely close!
-      if (occupants.length >= 2) {
-        
-        // Compare the few satellites inside this specific sector
-        for (let i = 0; i < occupants.length; i++) {
-          for (let j = i + 1; j < occupants.length; j++) {
-            const sat1 = occupants[i];
-            const sat2 = occupants[j];
+      const [sectorX, sectorY, sectorZ] = sector.split('_').map(Number);
+      const candidates = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            candidates.push(...(spatialGrid.get(`${sectorX + dx}_${sectorY + dy}_${sectorZ + dz}`) || []));
+          }
+        }
+      }
+      if (occupants.length && candidates.length > 1) {
+        for (const sat1 of occupants) {
+          for (const sat2 of candidates) {
+            if (sat1.id === sat2.id) continue;
+            const pairKey = [sat1.id, sat2.id].sort().join('_');
+            if (seenPairs.has(pairKey)) continue;
+            seenPairs.add(pairKey);
 
             // Calculate exact distance using 3D Pythagorean theorem
             const dx = sat2.x - sat1.x;
@@ -300,6 +310,7 @@ app.get('/api/conjunction-risks', (req, res) => {
                 norad2: sat2.id,
                 missDistanceKm: distanceKm,
                 relativeVelocityKmS: relativeVelocity,
+                // A screening flag, deliberately not a collision probability.
                 riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
               });
             }

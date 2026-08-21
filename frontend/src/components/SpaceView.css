@@ -1,0 +1,15 @@
+.analysis-rail { position: relative; min-width: 380px; }
+.resize-handle { position: absolute; z-index: 5; left: -7px; top: 0; bottom: 0; width: 14px; padding: 0; border: 0; background: transparent; cursor: col-resize; }
+.resize-handle span { display: block; width: 2px; height: 100%; margin: auto; background: transparent; transition: background .18s; }
+.resize-handle:hover span, .resize-handle:focus span { background: #51d9ff; box-shadow: 0 0 12px #51d9ff; }
+.pair-names { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid #ffffff12; font: 10px 'DM Mono'; color: #7896ae; }
+.pair-names span { display: grid; grid-template-columns: 78px 1fr; gap: 10px; }
+.pair-names b { color: #edf7fb; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analysis-rail h4 { margin: 18px 0 2px; color: #86a9c0; font: 10px 'DM Mono'; letter-spacing: 1.5px; }
+.analysis-rail .metric { display: grid; grid-template-columns: 1fr auto; column-gap: 16px; padding: 12px 0; }
+.analysis-rail .metric strong { font-size: 21px; text-align: right; }
+.analysis-rail .metric small { grid-column: 2; text-align: right; }
+.telemetry-card p { display: flex; justify-content: space-between; }
+.telemetry-card p b { color: #edf7fb; font-weight: 500; }
+.telemetry-card em { display: block; border-top: 1px solid #ffffff12; padding-top: 9px; margin-top: 11px; color: #55e6b2; font: 9px 'DM Mono'; font-style: normal; }
+@media (max-width: 1120px) { .resize-handle { display: none; } }
