@@ -284,21 +284,25 @@ app.get('/api/conjunction-risks', (req, res) => {
             const dz = sat2.z - sat1.z;
             const distanceKm = Math.sqrt(dx**2 + dy**2 + dz**2);
 
-            // Calculate relative velocity
+
+// Calculate relative velocity
             const dvx = sat2.vx - sat1.vx;
             const dvy = sat2.vy - sat1.vy;
             const dvz = sat2.vz - sat1.vz;
             const relativeVelocity = Math.sqrt(dvx**2 + dvy**2 + dvz**2);
 
-            highRiskPairs.push({
-              object1: sat1.name,
-              norad1: sat1.id,
-              object2: sat2.name,
-              norad2: sat2.id,
-              missDistanceKm: distanceKm,
-              relativeVelocityKmS: relativeVelocity,
-              riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
-            });
+            // NEW: Ignore objects that are exactly 0 distance apart (Docked objects / ISS Modules)
+            if (distanceKm > 0.1) {
+              highRiskPairs.push({
+                object1: sat1.name,
+                norad1: sat1.id,
+                object2: sat2.name,
+                norad2: sat2.id,
+                missDistanceKm: distanceKm,
+                relativeVelocityKmS: relativeVelocity,
+                riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
+              });
+            }
           }
         }
       }
