@@ -18,7 +18,29 @@ function Screening() {
  useEffect(()=>{load()},[])
  const rank={HIGH:4,MEDIUM:3,LOW:2,'VERY LOW':1}
  const rows=[...(data?.risks||[])].sort((a,b)=>sort==='likelihood'?(rank[b.estimatedLikelihood]-rank[a.estimatedLikelihood]||a.missDistanceKm-b.missDistanceKm):sort==='density'?b.nearbyDebrisCount-a.nearbyDebrisCount:sort==='speed'?b.relativeVelocityKmS-a.relativeVelocityKmS:a.missDistanceKm-b.missDistanceKm)
- return <section className="content-page"><div className="page-intro"><div><span>CATALOGUE SCREENING</span><h1>Estimated collision likelihood.</h1><p>Qualitative likelihood from propagated proximity, relative motion and nearby debris.</p></div><button className="primary-button" onClick={load}>{loading?'SCREENING…':'REFRESH SCREEN'}</button></div><div className="important-note"><b>Prototype estimate</b><p>High, Medium, Low and Very Low are qualitative likelihood indicators. They are not an operational probability of collision (Pc) and must not be used for avoidance decisions.</p></div>{error&&<div className="screening-error">{error}</div>}<div className="screen-sort"><span>Sort by</span>{[['likelihood','Likelihood'],['distance','Separation'],['density','Nearby debris'],['speed','Relative speed']].map(([key,label])=><button className={sort===key?'active':''} key={key} onClick={()=>setSort(key)}>{label}</button>)}</div><div className="catalog-table"><div className="table-head"><span>ACTIVE SATELLITE / DEBRIS</span><span>EST. LIKELIHOOD</span><span>SEPARATION</span><span>NEARBY DEBRIS</span><span>RELATIVE SPEED</span></div>{rows.map(x=>{const satellite=x.type1==='DEBRIS'?x.object2:x.object1;const debris=x.type1==='DEBRIS'?x.object1:x.object2;const likelihood=x.estimatedLikelihood||'VERY LOW';return <div className="table-row" key={`${x.norad1}-${x.norad2}`}><strong>{satellite}<small>vs {debris}</small></strong><span className={`priority-${likelihood.toLowerCase().replace(' ','-')}`}>{likelihood}</span><span>{x.missDistanceKm.toFixed(2)} km</span><span>{x.nearbyDebrisCount||0}</span><span>{x.relativeVelocityKmS.toFixed(2)} km/s</span></div>})}</div></section>
+ return <section className="content-page"><div className="page-intro"><div><span>CATALOGUE SCREENING</span><h1>Estimated collision likelihood.</h1><p>Qualitative likelihood from propagated proximity, relative motion and nearby debris.</p></div><button className="primary-button" onClick={load}>{loading?'SCREENING…':'REFRESH SCREEN'}</button></div><div className="important-note"><b>Prototype estimate</b><p>High, Medium, Low and Very Low are qualitative likelihood indicators. They are not an operational probability of collision (Pc) and must not be used for avoidance decisions.</p></div>{error&&<div className="screening-error">{error}</div>}<div className="screen-sort"><span>Sort by</span>{[['likelihood','Likelihood'],['distance','Separation'],['density','Nearby debris'],['speed','Relative speed']].map(([key,label])=><button className={sort===key?'active':''} key={key} onClick={()=>setSort(key)}>{label}</button>)}</div><div className="catalog-table"><div className="table-head"><span>ACTIVE SATELLITE / DEBRIS</span><span>EST. LIKELIHOOD</span><span>SEPARATION</span><span>NEARBY DEBRIS</span><span>RELATIVE SPEED</span></div>{rows.map(x => {
+  // 1. Grab the names
+  const satellite = x.type1 === 'DEBRIS' ? x.object2 : x.object1;
+  const debris = x.type1 === 'DEBRIS' ? x.object1 : x.object2;
+  
+  // 2. Grab the matching NORAD IDs
+  const satNorad = x.type1 === 'DEBRIS' ? x.norad2 : x.norad1;
+  const debNorad = x.type1 === 'DEBRIS' ? x.norad1 : x.norad2;
+  
+  const likelihood = x.estimatedLikelihood || 'VERY LOW';
+  
+  return (
+    <div className="table-row" key={`${x.norad1}-${x.norad2}`}>
+      {/* 3. Render the Names AND the IDs! */}
+      <strong>{satellite} [{satNorad}]<small>vs {debris} [{debNorad}]</small></strong>
+      
+      <span className={`priority-${likelihood.toLowerCase().replace(' ', '-')}`}>{likelihood}</span>
+      <span>{x.missDistanceKm.toFixed(2)} km</span>
+      <span>{x.nearbyDebrisCount || 0}</span>
+      <span>{x.relativeVelocityKmS.toFixed(2)} km/s</span>
+    </div>
+  )
+})}</div></section>
 }
 function Heatmap() {
   const [data, setData] = useState(null)
