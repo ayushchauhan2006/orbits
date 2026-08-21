@@ -1,0 +1,18 @@
+.hidden-page { display:none; }
+.heatmap-page { max-width:1280px; }
+.heatmap-controls { display:flex; align-items:center; gap:10px; margin:0 0 22px; }
+.heatmap-controls button { border:1px solid #3d6276; border-radius:5px; background:#0b1b29; color:#7695a8; padding:10px 15px; font-size:13px; }
+.heatmap-controls button.enabled { color:#effbff; background:#173246; border-color:#5b9fbc; }
+.heatmap-controls i,.heatmap-legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; }
+.satellite-toggle i { background:#22db73; }.debris-toggle i { background:#ff3f48; }
+.satellite-heat { background:radial-gradient(circle, #00c85d 0%, #00a84b9c 33%, #08783840 58%, transparent 76%); }.debris-heat { background:radial-gradient(circle, #ee3945 0%, #be1c289c 33%, #85121c40 58%, transparent 76%); }
+.heatmap-controls span { margin-left:auto; color:#8ba7b8; font:11px 'DM Mono'; }
+.heatmap-error { margin:-6px 0 16px; padding:12px 14px; border:1px solid #c95a5a; background:#5e1c2630; color:#ffc1c1; font-size:13px; }
+.flat-earth { position:relative; height:min(54vw,600px); min-height:360px; overflow:hidden; border:1px solid #45728a; background-size:100% 100%; background-position:center; box-shadow:0 16px 45px #0007; }
+.flat-earth::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(#06203625,#06111f34); }
+.heat-grid { position:absolute; inset:0; z-index:1; display:grid; overflow:hidden; }
+.heat-cell { position:relative; min-width:0; min-height:0; overflow:visible; }
+.heat-cell i { position:absolute; inset:-70%; mix-blend-mode:multiply; filter:blur(5px); pointer-events:none; }
+.map-coordinates { position:absolute; z-index:2; left:15px; right:15px; bottom:11px; display:flex; justify-content:space-between; color:#d0ebf5; text-shadow:0 1px 3px #000; font:10px 'DM Mono'; }
+.heatmap-legend { display:flex; gap:24px; align-items:center; margin-top:16px; color:#d2e6ef; font-size:12px; }.heatmap-legend i { vertical-align:middle; }.heatmap-legend p { margin-left:auto; color:#85a4b7; font:10px 'DM Mono'; }
+@media(max-width:700px){.heatmap-controls{flex-wrap:wrap}.heatmap-controls span{width:100%;margin:4px 0 0}.flat-earth{height:56vw;min-height:250px}.heatmap-legend{flex-wrap:wrap;gap:12px}.heatmap-legend p{width:100%;margin:4px 0 0}}
