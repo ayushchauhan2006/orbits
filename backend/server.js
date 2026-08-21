@@ -21,6 +21,14 @@ app.use(cors())
 let satelliteRecords = [];
 let rawOrbitalData = [];
 
+// The active CelesTrak GP feed does not always include OBJECT_TYPE. Infer a
+// debris class from standard catalogue naming conventions when it is missing.
+function isDebrisObject(object) {
+  if (object.OBJECT_TYPE === 'DEBRIS') return true;
+  const name = String(object.OBJECT_NAME || '');
+  return /\b(DEB|DEBRIS|R\/B|ROCKET BODY|FREGAT|BREEZE|PAYLOAD ADAPTER)\b/i.test(name);
+}
+
 async function fetchLiveData() {
   try {
     console.log("Attempting to fetch active catalog AND debris catalog...");
@@ -238,6 +246,39 @@ app.get('/api/orbital-data', (req, res) => {
   // Just send the live data we downloaded earlier!
   res.json(rawOrbitalData);
 })
+
+// ------------------------------------
+// FLAT-MAP DENSITY HEATMAP
+// ------------------------------------
+app.get('/api/heatmap', (req, res) => {
+  try {
+    const columns = 72;
+    const rows = 36;
+    const activeGrid = Array(columns * rows).fill(0);
+    const debrisGrid = Array(columns * rows).fill(0);
+    const now = new Date();
+    const gmst = satellite.gstime(now);
+
+    for (const item of satelliteRecords) {
+      try {
+        const state = satellite.propagate(item.satrec, now);
+        if (!state?.position) continue;
+        const gd = satellite.eciToGeodetic(state.position, gmst);
+        const latitude = satellite.radiansToDegrees(gd.latitude);
+        const longitude = satellite.radiansToDegrees(gd.longitude);
+        const col = Math.min(columns - 1, Math.max(0, Math.floor((longitude + 180) / 360 * columns)));
+        const row = Math.min(rows - 1, Math.max(0, Math.floor((90 - latitude) / 180 * rows)));
+        const bucket = item.object.OBJECT_TYPE === 'DEBRIS' ? debrisGrid : activeGrid;
+        bucket[row * columns + col] += 1;
+      } catch (_) {}
+    }
+
+    res.json({ columns, rows, satellite: activeGrid, debris: debrisGrid, timestamp: now.toISOString() });
+  } catch (error) {
+    console.error('Heatmap error:', error);
+    res.status(500).json({ error: 'Failed to calculate heatmap' });
+  }
+});
 // ------------------------------------
 // CONJUNCTION RISK ENGINE (O(N) Spatial Grid)
 // ------------------------------------
@@ -275,6 +316,7 @@ const satData = {
           id: item.object.NORAD_CAT_ID,
           name: item.object.OBJECT_NAME,
           type: item.object.OBJECT_TYPE, // NEW: Tell the grid if this is ACTIVE or DEBRIS
+          epoch: item.object.EPOCH,
           x, y, z,
           vx: velocity.x, vy: velocity.y, vz: velocity.z
         };
@@ -333,8 +375,12 @@ if (seenPairs.has(pairKey)) continue;
               highRiskPairs.push({
                 object1: sat1.name,
                 norad1: sat1.id,
+                type1: sat1.type,
+                epoch1: sat1.epoch,
                 object2: sat2.name,
                 norad2: sat2.id,
+                type2: sat2.type,
+                epoch2: sat2.epoch,
                 missDistanceKm: distanceKm,
                 relativeVelocityKmS: relativeVelocity,
                 riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
@@ -345,8 +391,30 @@ if (seenPairs.has(pairKey)) continue;
       }
     }
 
-    // 4. Sort by closest distance and return the Top 20 worst risks
-    highRiskPairs.sort((a, b) => a.missDistanceKm - b.missDistanceKm);
+    // 4. Turn propagated proximity, local debris concentration and element
+    // freshness into a qualitative Estimated Collision Likelihood.
+    // This is deliberately not an operational probability of collision (Pc).
+    const debrisNearby = new Map();
+    for (const pair of highRiskPairs) {
+      if (pair.missDistanceKm > 5) continue;
+      const key = String(pair.type1 === 'DEBRIS' ? pair.norad2 : pair.norad1);
+      debrisNearby.set(key, (debrisNearby.get(key) || 0) + 1);
+    }
+    const likelihoodRank = { HIGH: 4, MEDIUM: 3, LOW: 2, 'VERY LOW': 1 };
+    for (const pair of highRiskPairs) {
+      const localCount = debrisNearby.get(String(pair.type1 === 'DEBRIS' ? pair.norad2 : pair.norad1)) || 0;
+      pair.nearbyDebrisCount = localCount;
+      const activeEpoch = pair.type1 === 'DEBRIS' ? pair.epoch2 : pair.epoch1;
+      pair.elementAgeDays = activeEpoch ? Math.max(0, (now - new Date(activeEpoch)) / 86400000) : null;
+      if (pair.missDistanceKm < 2) pair.estimatedLikelihood = 'HIGH';
+      else if (pair.missDistanceKm < 5 && localCount >= 3) pair.estimatedLikelihood = 'HIGH';
+      else if (pair.missDistanceKm < 5) pair.estimatedLikelihood = 'MEDIUM';
+      else if (pair.missDistanceKm < 20) pair.estimatedLikelihood = 'LOW';
+      else pair.estimatedLikelihood = 'VERY LOW';
+    }
+
+    // Sort the qualitative likelihood first, then the apparent separation.
+    highRiskPairs.sort((a, b) => likelihoodRank[b.estimatedLikelihood] - likelihoodRank[a.estimatedLikelihood] || a.missDistanceKm - b.missDistanceKm);
     const topRisks = highRiskPairs.slice(0, 20);
 
     res.json({
@@ -361,6 +429,7 @@ if (seenPairs.has(pairKey)) continue;
     res.status(500).json({ error: 'Failed to run spatial analysis' });
   }
 });
+
 app.listen(PORT, () => {
 
   console.log(
