@@ -15,54 +15,78 @@ app.use(cors())
 // ------------------------------------
 // FETCH LIVE DATA WITH LOCAL FALLBACK
 // ------------------------------------
+// ------------------------------------
+// FETCH LIVE DATA WITH LOCAL FALLBACK
+// ------------------------------------
 let satelliteRecords = [];
 let rawOrbitalData = [];
 
 async function fetchLiveData() {
   try {
-    console.log("Attempting to fetch live catalog from Celestrak...");
+    console.log("Attempting to fetch active catalog AND debris catalog...");
     
-    const response = await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json');
+    // FETCH BOTH SIMULTANEOUSLY
+    const [activeResponse, debrisResponse] = await Promise.all([
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'),
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=json') // Real 2009 Collision Debris
+    ]);
     
-    // 1. First, check if Celestrak sent us an HTML/Text error page instead of JSON
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Celestrak rate-limit triggered! They sent text instead of JSON.");
+    if (!activeResponse.ok || !debrisResponse.ok) {
+        throw new Error("Celestrak API failed or rate-limited.");
     }
 
-    const data = await response.json();
-    rawOrbitalData = data; 
+    const activeData = await activeResponse.json();
+    const debrisData = await debrisResponse.json();
+
+    // TAG THE DATA SO THE FRONTEND KNOWS WHAT IS JUNK
+    activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE');
+    debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS');
+
+    // Combine them into one massive array
+    const combinedData = [...activeData, ...debrisData];
+    rawOrbitalData = combinedData; 
     
-    satelliteRecords = data
+    satelliteRecords = combinedData
       .map((object) => {
         try {
           return { object, satrec: satellite.json2satrec(object) }
         } catch (error) { return null }
       }).filter(Boolean);
 
-    console.log(`SUCCESS: Loaded ${satelliteRecords.length} LIVE satellite objects!`);
+    console.log(`SUCCESS: Loaded ${activeData.length} Active Satellites and ${debrisData.length} Debris Fragments!`);
 
   } catch (error) {
-    // 2. FALLBACK TRIGGERED! Load the local file so the app doesn't crash
     console.warn(`API Error: ${error.message}`);
+    // ... Keep your existing fallback logic here if you want it ...
     console.log("FALLING BACK TO LOCAL CACHE: Loading active-real.json...");
 
-    try {
-      const DATA_FILE = path.join(__dirname, 'active-real.json');
-      const rawData = fs.readFileSync(DATA_FILE, 'utf8');
-      const data = JSON.parse(rawData);
+try {
+      // 1. Load the Offline Active Satellites
+      const ACTIVE_FILE = path.join(__dirname, 'active-real.json');
+      const activeRaw = fs.readFileSync(ACTIVE_FILE, 'utf8');
+      const activeData = JSON.parse(activeRaw);
+      activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE'); // Tag for search
 
-      rawOrbitalData = data;
-      satelliteRecords = data
+      // 2. Load the Offline Cosmos Debris
+      const DEBRIS_FILE = path.join(__dirname, 'debris-real.json');
+      const debrisRaw = fs.readFileSync(DEBRIS_FILE, 'utf8');
+      const debrisData = JSON.parse(debrisRaw);
+      debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS'); // Tag for swarm
+
+      // 3. Merge them together!
+      const combinedData = [...activeData, ...debrisData];
+      rawOrbitalData = combinedData;
+
+      satelliteRecords = combinedData
         .map((object) => {
           try {
             return { object, satrec: satellite.json2satrec(object) }
           } catch (err) { return null }
         }).filter(Boolean);
 
-      console.log(`FALLBACK SUCCESS: Loaded ${satelliteRecords.length} offline satellite objects!`);
+      console.log(`FALLBACK SUCCESS: Loaded ${activeData.length} Active and ${debrisData.length} Debris offline!`);
     } catch (fallbackError) {
-      console.error("FATAL ERROR: Could not load live data OR local fallback file.", fallbackError);
+      console.error("FATAL ERROR: Could not load local fallback files.", fallbackError);
     }
   }
 }
@@ -247,9 +271,10 @@ app.get('/api/conjunction-risks', (req, res) => {
         const gridZ = Math.floor(z / GRID_SIZE_KM);
         const sectorKey = `${gridX}_${gridY}_${gridZ}`;
 
-        const satData = {
+const satData = {
           id: item.object.NORAD_CAT_ID,
           name: item.object.OBJECT_NAME,
+          type: item.object.OBJECT_TYPE, // NEW: Tell the grid if this is ACTIVE or DEBRIS
           x, y, z,
           vx: velocity.x, vy: velocity.y, vz: velocity.z
         };
@@ -285,8 +310,11 @@ app.get('/api/conjunction-risks', (req, res) => {
           for (const sat2 of candidates) {
             if (sat1.id === sat2.id) continue;
             const pairKey = [sat1.id, sat2.id].sort().join('_');
-            if (seenPairs.has(pairKey)) continue;
+if (seenPairs.has(pairKey)) continue;
             seenPairs.add(pairKey);
+
+            // NEW: If they are the same type (Sat vs Sat, or Deb vs Deb), skip them immediately!
+            if (sat1.type === sat2.type) continue; 
 
             // Calculate exact distance using 3D Pythagorean theorem
             const dx = sat2.x - sat1.x;
@@ -294,14 +322,13 @@ app.get('/api/conjunction-risks', (req, res) => {
             const dz = sat2.z - sat1.z;
             const distanceKm = Math.sqrt(dx**2 + dy**2 + dz**2);
 
-
-// Calculate relative velocity
+            // Calculate relative velocity
             const dvx = sat2.vx - sat1.vx;
             const dvy = sat2.vy - sat1.vy;
             const dvz = sat2.vz - sat1.vz;
             const relativeVelocity = Math.sqrt(dvx**2 + dvy**2 + dvz**2);
 
-            // NEW: Ignore objects that are exactly 0 distance apart (Docked objects / ISS Modules)
+            // Push ALL valid Satellite-vs-Debris risks to the array
             if (distanceKm > 0.1) {
               highRiskPairs.push({
                 object1: sat1.name,
@@ -310,7 +337,6 @@ app.get('/api/conjunction-risks', (req, res) => {
                 norad2: sat2.id,
                 missDistanceKm: distanceKm,
                 relativeVelocityKmS: relativeVelocity,
-                // A screening flag, deliberately not a collision probability.
                 riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
               });
             }
