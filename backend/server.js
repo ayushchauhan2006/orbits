@@ -31,26 +31,33 @@ function isDebrisObject(object) {
 
 async function fetchLiveData() {
   try {
-    console.log("Attempting to fetch active catalog AND debris catalog...");
+    console.log("Attempting to fetch active catalog AND major debris catalogs...");
     
-    // FETCH BOTH SIMULTANEOUSLY
-    const [activeResponse, debrisResponse] = await Promise.all([
+    // FETCH THE "BIG THREE" DEBRIS CLOUDS PLUS ACTIVE SATELLITES
+    const [activeRes, cosmosRes, iridiumRes, fengyunRes] = await Promise.all([
       fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'),
-      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=json') // Real 2009 Collision Debris
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=json'), 
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-33-debris&FORMAT=json'),
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=fengyun-1c-debris&FORMAT=json')
     ]);
     
-    if (!activeResponse.ok || !debrisResponse.ok) {
+    if (!activeRes.ok || !cosmosRes.ok || !iridiumRes.ok || !fengyunRes.ok) {
         throw new Error("Celestrak API failed or rate-limited.");
     }
 
-    const activeData = await activeResponse.json();
-    const debrisData = await debrisResponse.json();
+    const activeData = await activeRes.json();
+    const cosmosData = await cosmosRes.json();
+    const iridiumData = await iridiumRes.json();
+    const fengyunData = await fengyunRes.json();
 
     // TAG THE DATA SO THE FRONTEND KNOWS WHAT IS JUNK
     activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE');
+    
+    // Combine all three debris clouds into one massive array
+    const debrisData = [...cosmosData, ...iridiumData, ...fengyunData];
     debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS');
 
-    // Combine them into one massive array
+    // Merge active and debris into the master catalog
     const combinedData = [...activeData, ...debrisData];
     rawOrbitalData = combinedData; 
     
@@ -63,26 +70,40 @@ async function fetchLiveData() {
 
     console.log(`SUCCESS: Loaded ${activeData.length} Active Satellites and ${debrisData.length} Debris Fragments!`);
 
-  } catch (error) {
+} catch (error) {
     console.warn(`API Error: ${error.message}`);
-    // ... Keep your existing fallback logic here if you want it ...
-    console.log("FALLING BACK TO LOCAL CACHE: Loading active-real.json...");
+    console.log("FALLING BACK TO LOCAL CACHE...");
 
-try {
-      // 1. Load the Offline Active Satellites
-      const ACTIVE_FILE = path.join(__dirname, 'active-real.json');
-      const activeRaw = fs.readFileSync(ACTIVE_FILE, 'utf8');
-      const activeData = JSON.parse(activeRaw);
-      activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE'); // Tag for search
+    try {
+// Helper function to safely load, validate, and tag offline files
+      const loadJson = (filename, type) => {
+        const filePath = path.join(__dirname, filename);
+        if (fs.existsSync(filePath)) {
+          try {
+            const rawContent = fs.readFileSync(filePath, 'utf8');
+            const data = JSON.parse(rawContent);
+            if (Array.isArray(data)) {
+              data.forEach(d => d.OBJECT_TYPE = type);
+              return data;
+            }
+            console.warn(`Warning: ${filename} is not a valid JSON array.`);
+          } catch (parseErr) {
+            console.warn(`Warning: Could not parse ${filename}. It may contain rate-limit text.`);
+          }
+        } else {
+          console.warn(`Warning: Backup file ${filename} not found.`);
+        }
+        return [];
+      };
 
-      // 2. Load the Offline Cosmos Debris
-      const DEBRIS_FILE = path.join(__dirname, 'debris-real.json');
-      const debrisRaw = fs.readFileSync(DEBRIS_FILE, 'utf8');
-      const debrisData = JSON.parse(debrisRaw);
-      debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS'); // Tag for swarm
+      // 1. Safely load all 4 local files
+      const activeData = loadJson('active-real.json', 'ACTIVE');
+      const cosmosData = loadJson('debris-real.json', 'DEBRIS');
+      const iridiumData = loadJson('iridium-real.json', 'DEBRIS');
+      const fengyunData = loadJson('fengyun-real.json', 'DEBRIS');
 
-      // 3. Merge them together!
-      const combinedData = [...activeData, ...debrisData];
+      // 2. Merge them together
+      const combinedData = [...activeData, ...cosmosData, ...iridiumData, ...fengyunData];
       rawOrbitalData = combinedData;
 
       satelliteRecords = combinedData
@@ -92,7 +113,9 @@ try {
           } catch (err) { return null }
         }).filter(Boolean);
 
-      console.log(`FALLBACK SUCCESS: Loaded ${activeData.length} Active and ${debrisData.length} Debris offline!`);
+      const totalDebris = cosmosData.length + iridiumData.length + fengyunData.length;
+      console.log(`FALLBACK SUCCESS: Loaded ${activeData.length} Active and ${totalDebris} Debris offline!`);
+      
     } catch (fallbackError) {
       console.error("FATAL ERROR: Could not load local fallback files.", fallbackError);
     }
