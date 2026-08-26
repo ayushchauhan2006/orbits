@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import SpaceView from './components/SpaceView'
 import earthTexture from './assets/earth-texture.png'
 import './App.css'
