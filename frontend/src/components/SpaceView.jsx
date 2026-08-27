@@ -4,9 +4,11 @@ import * as satellite from 'satellite.js'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { Line, OrbitControls, Stars } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
+
 import earthTexture from '../assets/earth-texture.png'
 import './SpaceView.css'
 import './MissionPolish.css'
+
 
 const API = 'http://localhost:3000', RADIUS = 6378.137, DISPLAY = 3.2, SCALE = DISPLAY / RADIUS
 const colors = ['#48d7ff', '#ffb454']
@@ -19,7 +21,9 @@ function Earth() {
   const mesh = useRef(), texture = useLoader(THREE.TextureLoader, earthTexture)
   texture.colorSpace = THREE.SRGBColorSpace
   useFrame((_, delta) => { if (mesh.current) mesh.current.rotation.y += delta * .035 })
-  return <group><mesh ref={mesh}><sphereGeometry args={[DISPLAY, 64, 64]} /><meshStandardMaterial map={texture} roughness={.7} metalness={.05} emissive="#061827" emissiveIntensity={.34} /></mesh><mesh scale={1.024}><sphereGeometry args={[DISPLAY, 64, 64]} /><meshBasicMaterial color="#67ceff" transparent opacity={.14} side={THREE.BackSide} /></mesh></group>
+  return <group><mesh ref={mesh}><sphereGeometry args={[DISPLAY, 64, 64]} />
+  <meshStandardMaterial map={texture} roughness={.7} metalness={.05} emissive="#061827" emissiveIntensity={.34} /></mesh><mesh scale={1.012}><sphereGeometry args={[DISPLAY, 64, 64]} />
+  <meshBasicMaterial color="#67ceff" transparent opacity={0.14} side={THREE.BackSide} /></mesh></group>
 }
 
 function Orbit({ data, color }) {
@@ -113,22 +117,27 @@ export function ActiveSwarm({ catalog, visible, onSatClick }) {
 
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
-  useFrame(() => {
+useFrame(() => {
     if (!visible || !meshRef.current || activeSats.length === 0) return
     const now = new Date()
-    let count = 0
     
-    // Use the .rec property for the orbital physics
-    for (const item of activeSats) {
+    // FIX: We use a standard 'for' loop so the index (i) perfectly 
+    // matches the instanceId when you click on it!
+    for (let i = 0; i < activeSats.length; i++) {
       try {
-        const state = satellite.propagate(item.rec, now)
+        const state = satellite.propagate(activeSats[i].rec, now)
         if (state?.position) {
           dummy.position.set(...toScene(state.position))
-          dummy.updateMatrix()
-          meshRef.current.setMatrixAt(count, dummy.matrix)
-          count++
+          dummy.scale.set(1, 1, 1) // Normal size
+        } else {
+          dummy.scale.set(0, 0, 0) // Hide broken satellites, but keep the index!
         }
-      } catch (e) {}
+      } catch (e) {
+        dummy.scale.set(0, 0, 0) // Hide broken satellites, but keep the index!
+      }
+      
+      dummy.updateMatrix()
+      meshRef.current.setMatrixAt(i, dummy.matrix) // Update exactly at index 'i'
     }
     meshRef.current.instanceMatrix.needsUpdate = true
   })
