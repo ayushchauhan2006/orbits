@@ -21,28 +21,43 @@ app.use(cors())
 let satelliteRecords = [];
 let rawOrbitalData = [];
 
+// The active CelesTrak GP feed does not always include OBJECT_TYPE. Infer a
+// debris class from standard catalogue naming conventions when it is missing.
+function isDebrisObject(object) {
+  if (object.OBJECT_TYPE === 'DEBRIS') return true;
+  const name = String(object.OBJECT_NAME || '');
+  return /\b(DEB|DEBRIS|R\/B|ROCKET BODY|FREGAT|BREEZE|PAYLOAD ADAPTER)\b/i.test(name);
+}
+
 async function fetchLiveData() {
   try {
-    console.log("Attempting to fetch active catalog AND debris catalog...");
+    console.log("Attempting to fetch active catalog AND major debris catalogs...");
     
-    // FETCH BOTH SIMULTANEOUSLY
-    const [activeResponse, debrisResponse] = await Promise.all([
+    // FETCH THE "BIG THREE" DEBRIS CLOUDS PLUS ACTIVE SATELLITES
+    const [activeRes, cosmosRes, iridiumRes, fengyunRes] = await Promise.all([
       fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json'),
-      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=json') // Real 2009 Collision Debris
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=json'), 
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-33-debris&FORMAT=json'),
+      fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=fengyun-1c-debris&FORMAT=json')
     ]);
     
-    if (!activeResponse.ok || !debrisResponse.ok) {
+    if (!activeRes.ok || !cosmosRes.ok || !iridiumRes.ok || !fengyunRes.ok) {
         throw new Error("Celestrak API failed or rate-limited.");
     }
 
-    const activeData = await activeResponse.json();
-    const debrisData = await debrisResponse.json();
+    const activeData = await activeRes.json();
+    const cosmosData = await cosmosRes.json();
+    const iridiumData = await iridiumRes.json();
+    const fengyunData = await fengyunRes.json();
 
     // TAG THE DATA SO THE FRONTEND KNOWS WHAT IS JUNK
     activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE');
+    
+    // Combine all three debris clouds into one massive array
+    const debrisData = [...cosmosData, ...iridiumData, ...fengyunData];
     debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS');
 
-    // Combine them into one massive array
+    // Merge active and debris into the master catalog
     const combinedData = [...activeData, ...debrisData];
     rawOrbitalData = combinedData; 
     
@@ -55,26 +70,40 @@ async function fetchLiveData() {
 
     console.log(`SUCCESS: Loaded ${activeData.length} Active Satellites and ${debrisData.length} Debris Fragments!`);
 
-  } catch (error) {
+} catch (error) {
     console.warn(`API Error: ${error.message}`);
-    // ... Keep your existing fallback logic here if you want it ...
-    console.log("FALLING BACK TO LOCAL CACHE: Loading active-real.json...");
+    console.log("FALLING BACK TO LOCAL CACHE...");
 
-try {
-      // 1. Load the Offline Active Satellites
-      const ACTIVE_FILE = path.join(__dirname, 'active-real.json');
-      const activeRaw = fs.readFileSync(ACTIVE_FILE, 'utf8');
-      const activeData = JSON.parse(activeRaw);
-      activeData.forEach(d => d.OBJECT_TYPE = 'ACTIVE'); // Tag for search
+    try {
+// Helper function to safely load, validate, and tag offline files
+      const loadJson = (filename, type) => {
+        const filePath = path.join(__dirname, filename);
+        if (fs.existsSync(filePath)) {
+          try {
+            const rawContent = fs.readFileSync(filePath, 'utf8');
+            const data = JSON.parse(rawContent);
+            if (Array.isArray(data)) {
+              data.forEach(d => d.OBJECT_TYPE = type);
+              return data;
+            }
+            console.warn(`Warning: ${filename} is not a valid JSON array.`);
+          } catch (parseErr) {
+            console.warn(`Warning: Could not parse ${filename}. It may contain rate-limit text.`);
+          }
+        } else {
+          console.warn(`Warning: Backup file ${filename} not found.`);
+        }
+        return [];
+      };
 
-      // 2. Load the Offline Cosmos Debris
-      const DEBRIS_FILE = path.join(__dirname, 'debris-real.json');
-      const debrisRaw = fs.readFileSync(DEBRIS_FILE, 'utf8');
-      const debrisData = JSON.parse(debrisRaw);
-      debrisData.forEach(d => d.OBJECT_TYPE = 'DEBRIS'); // Tag for swarm
+      // 1. Safely load all 4 local files
+      const activeData = loadJson('active-real.json', 'ACTIVE');
+      const cosmosData = loadJson('debris-real.json', 'DEBRIS');
+      const iridiumData = loadJson('iridium-real.json', 'DEBRIS');
+      const fengyunData = loadJson('fengyun-real.json', 'DEBRIS');
 
-      // 3. Merge them together!
-      const combinedData = [...activeData, ...debrisData];
+      // 2. Merge them together
+      const combinedData = [...activeData, ...cosmosData, ...iridiumData, ...fengyunData];
       rawOrbitalData = combinedData;
 
       satelliteRecords = combinedData
@@ -84,7 +113,9 @@ try {
           } catch (err) { return null }
         }).filter(Boolean);
 
-      console.log(`FALLBACK SUCCESS: Loaded ${activeData.length} Active and ${debrisData.length} Debris offline!`);
+      const totalDebris = cosmosData.length + iridiumData.length + fengyunData.length;
+      console.log(`FALLBACK SUCCESS: Loaded ${activeData.length} Active and ${totalDebris} Debris offline!`);
+      
     } catch (fallbackError) {
       console.error("FATAL ERROR: Could not load local fallback files.", fallbackError);
     }
@@ -238,6 +269,39 @@ app.get('/api/orbital-data', (req, res) => {
   // Just send the live data we downloaded earlier!
   res.json(rawOrbitalData);
 })
+
+// ------------------------------------
+// FLAT-MAP DENSITY HEATMAP
+// ------------------------------------
+app.get('/api/heatmap', (req, res) => {
+  try {
+    const columns = 72;
+    const rows = 36;
+    const activeGrid = Array(columns * rows).fill(0);
+    const debrisGrid = Array(columns * rows).fill(0);
+    const now = new Date();
+    const gmst = satellite.gstime(now);
+
+    for (const item of satelliteRecords) {
+      try {
+        const state = satellite.propagate(item.satrec, now);
+        if (!state?.position) continue;
+        const gd = satellite.eciToGeodetic(state.position, gmst);
+        const latitude = satellite.radiansToDegrees(gd.latitude);
+        const longitude = satellite.radiansToDegrees(gd.longitude);
+        const col = Math.min(columns - 1, Math.max(0, Math.floor((longitude + 180) / 360 * columns)));
+        const row = Math.min(rows - 1, Math.max(0, Math.floor((90 - latitude) / 180 * rows)));
+        const bucket = item.object.OBJECT_TYPE === 'DEBRIS' ? debrisGrid : activeGrid;
+        bucket[row * columns + col] += 1;
+      } catch (_) {}
+    }
+
+    res.json({ columns, rows, satellite: activeGrid, debris: debrisGrid, timestamp: now.toISOString() });
+  } catch (error) {
+    console.error('Heatmap error:', error);
+    res.status(500).json({ error: 'Failed to calculate heatmap' });
+  }
+});
 // ------------------------------------
 // CONJUNCTION RISK ENGINE (O(N) Spatial Grid)
 // ------------------------------------
@@ -275,6 +339,7 @@ const satData = {
           id: item.object.NORAD_CAT_ID,
           name: item.object.OBJECT_NAME,
           type: item.object.OBJECT_TYPE, // NEW: Tell the grid if this is ACTIVE or DEBRIS
+          epoch: item.object.EPOCH,
           x, y, z,
           vx: velocity.x, vy: velocity.y, vz: velocity.z
         };
@@ -333,8 +398,12 @@ if (seenPairs.has(pairKey)) continue;
               highRiskPairs.push({
                 object1: sat1.name,
                 norad1: sat1.id,
+                type1: sat1.type,
+                epoch1: sat1.epoch,
                 object2: sat2.name,
                 norad2: sat2.id,
+                type2: sat2.type,
+                epoch2: sat2.epoch,
                 missDistanceKm: distanceKm,
                 relativeVelocityKmS: relativeVelocity,
                 riskLevel: distanceKm < 10 ? 'CRITICAL' : 'HIGH'
@@ -345,8 +414,30 @@ if (seenPairs.has(pairKey)) continue;
       }
     }
 
-    // 4. Sort by closest distance and return the Top 20 worst risks
-    highRiskPairs.sort((a, b) => a.missDistanceKm - b.missDistanceKm);
+    // 4. Turn propagated proximity, local debris concentration and element
+    // freshness into a qualitative Estimated Collision Likelihood.
+    // This is deliberately not an operational probability of collision (Pc).
+    const debrisNearby = new Map();
+    for (const pair of highRiskPairs) {
+      if (pair.missDistanceKm > 5) continue;
+      const key = String(pair.type1 === 'DEBRIS' ? pair.norad2 : pair.norad1);
+      debrisNearby.set(key, (debrisNearby.get(key) || 0) + 1);
+    }
+    const likelihoodRank = { HIGH: 4, MEDIUM: 3, LOW: 2, 'VERY LOW': 1 };
+    for (const pair of highRiskPairs) {
+      const localCount = debrisNearby.get(String(pair.type1 === 'DEBRIS' ? pair.norad2 : pair.norad1)) || 0;
+      pair.nearbyDebrisCount = localCount;
+      const activeEpoch = pair.type1 === 'DEBRIS' ? pair.epoch2 : pair.epoch1;
+      pair.elementAgeDays = activeEpoch ? Math.max(0, (now - new Date(activeEpoch)) / 86400000) : null;
+      if (pair.missDistanceKm < 2) pair.estimatedLikelihood = 'HIGH';
+      else if (pair.missDistanceKm < 5 && localCount >= 3) pair.estimatedLikelihood = 'HIGH';
+      else if (pair.missDistanceKm < 5) pair.estimatedLikelihood = 'MEDIUM';
+      else if (pair.missDistanceKm < 20) pair.estimatedLikelihood = 'LOW';
+      else pair.estimatedLikelihood = 'VERY LOW';
+    }
+
+    // Sort the qualitative likelihood first, then the apparent separation.
+    highRiskPairs.sort((a, b) => likelihoodRank[b.estimatedLikelihood] - likelihoodRank[a.estimatedLikelihood] || a.missDistanceKm - b.missDistanceKm);
     const topRisks = highRiskPairs.slice(0, 20);
 
     res.json({
@@ -361,6 +452,7 @@ if (seenPairs.has(pairKey)) continue;
     res.status(500).json({ error: 'Failed to run spatial analysis' });
   }
 });
+
 app.listen(PORT, () => {
 
   console.log(
