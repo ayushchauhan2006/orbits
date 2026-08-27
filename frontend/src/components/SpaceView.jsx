@@ -171,7 +171,16 @@ function screenPair(first, second) {
 function Search({ catalog, label, selected, color, onSelect }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
-  return <div className="object-picker"><label>{label}</label><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Name or NORAD ID" />{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm(x.OBJECT_NAME) }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
+  return <div className="object-picker"><label>{label}</label><input
+  value={selected ? selected.OBJECT_NAME : term}
+  onChange={e => {
+    if (selected) {
+      onSelect(null)
+    }
+    setTerm(e.target.value)
+  }}
+  placeholder="Name or NORAD ID"
+/>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => {  onSelect(x); setTerm('')}}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
 const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
@@ -264,11 +273,11 @@ export default function SpaceView() {
     onClick={() => setShowAllActive(!showAllActive)}
   >
     {showAllActive ? 'HIDE ALL SATELLITES' : `SHOW ALL ${catalog.filter(c => c.OBJECT_TYPE === 'ACTIVE').length.toLocaleString()} SATELLITES`}
-  </button></div><DebrisWatchPanel selected={selected} watches={debrisWatch} />{error ? <p className="service-error">{error}</p> : <div className="catalog-live"><b /> {catalog.length ? `${catalog.length.toLocaleString()} catalogued objects loaded` : 'Connecting to catalog…'}</div>}<div className="method-note"><strong>Screening context</strong><p>Paths use SGP4 propagation. Results are visual indicators, not operational collision-avoidance advice.</p></div></div></aside>
+  </button></div><DebrisWatchPanel selected={selected} watches={debrisWatch} />{error ? <p className="service-error">{error}</p> : <div className="catalog-live"><b /> {catalog.length ? `${catalog.length.toLocaleString()} catalogued objects loaded` : 'Connecting to catalog…'}</div>}</div></aside>
   
   <div className="orbital-stage">
 
-  <OrbitDisplay selected={selected} />
+  
 
   <div className="stage-top">
     <span>EARTH-CENTERED INERTIAL VIEW</span>
@@ -276,7 +285,7 @@ export default function SpaceView() {
   </div>
 
   <Canvas
-    camera={{ position: [7.8, 4.2, 8.4], fov: 42 }}
+    camera={{ position: [7.8, 4.2, 8.4], fov: 36  }}
     dpr={[1, 1.7]}
   >
 
@@ -355,11 +364,7 @@ export default function SpaceView() {
 
   </Canvas>
 
-  <div className="stage-legend">
-    <span><i className="cyan" /> OBJECT A</span>
-    <span><i className="amber" /> OBJECT B</span>
-    <span><i className="orbit-key" /> PROPAGATED PATH</span>
-  </div>
+ <OrbitDisplay selected={selected} />
 
 </div>
 
@@ -450,12 +455,21 @@ export default function SpaceView() {
             Thresholds flag a closer look; they do not estimate collision probability.
           </p>
         </div>
+        
       </>
     ) : (
       <div className="analysis-empty">
         Choose both objects to calculate a 24-hour minimum-separation screening window.
       </div>
     )}
+    <div className="screening-context">
+  <span>SCREENING CONTEXT</span>
+
+  <p>
+    Paths use SGP4 propagation. Results are visual indicators,
+    not operational collision-avoidance advice.
+  </p>
+</div>
 
     <div className="telemetry-heading">
       INFORMATION · CLICK A SATELLITE
