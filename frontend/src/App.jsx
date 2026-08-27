@@ -317,61 +317,198 @@ function Methodology(){return <section className="content-page methodology"><spa
 export default function App() {
   const [tab, setTab] = useState('Mission control')
 
+  const [showIntro, setShowIntro] = useState(true)
+  const [showLoading, setShowLoading] = useState(false)
+
+  const enterWebsite = () => {
+    setShowIntro(false)
+    setShowLoading(true)
+
+    setTimeout(() => {
+      setShowLoading(false)
+      setTab('Mission control')
+    }, 2200)
+  }
+
   return (
-    <div className="app-shell">
+    <>
+      {/* ========================================
+          INTRO SCREEN
+      ======================================== */}
 
-      {/* ALWAYS VISIBLE DASHBOARD */}
-      <header className="topbar">
+      {showIntro && (
+  <section className="intro-screen">
 
-        <button
-          className="wordmark"
-          onClick={() => setTab('Mission control')}
-        >
-          <i>◌</i>
-          <span>
-            ORBITAL<br />
-            <small>INTELLIGENCE</small>
-          </span>
-        </button>
+    <video
+      className="intro-video"
+      autoPlay
+      muted
+      loop
+      playsInline
+    >
+      <source
+        src="/earth.mp4"
+        type="video/mp4"
+      />
+    </video>
 
-        <nav>
-          {tabs.map(x => (
-            <button
-              className={tab === x ? 'active' : ''}
-              onClick={() => setTab(x)}
-              key={x}
-            >
-              {x}
-            </button>
-          ))}
-        </nav>
+    <div className="intro-overlay" />
 
-        <div className="system-live">
-          <b /> SYSTEM NOMINAL
-        </div>
+    <div className="intro-content">
 
-      </header>
+      <div className="intro-brand">
+        ORBITAL
+      </div>
 
-      {/* CONTENT BELOW DASHBOARD */}
-      <main>
+      <div className="intro-kicker">
+        SPACE INTELLIGENCE
+      </div>
 
-        <div className={tab === 'Mission control' ? '' : 'hidden-page'}>
-          <SpaceView />
-        </div>
+      <h1>
+        The Orbital Frontier
+      </h1>
 
-        {tab === 'Catalog' && <Catalog />}
-        {tab === 'Screening' && <Screening />}
-        {tab === 'Heatmap' && <Heatmap />}
-        {tab === 'Methodology' && <Methodology />}
+      <p>
+        Enter the world of Satellite and Debris
+      </p>
 
-      </main>
-
-      <footer>
-        <span>ORBITAL INTELLIGENCE / SIH 2026</span>
-        <span>SGP4 PROPAGATION · CATALOGUE-BASED SCREENING</span>
-        <span>NOT FOR OPERATIONAL COLLISION AVOIDANCE</span>
-      </footer>
+      <button
+        className="enter-button"
+        onClick={enterWebsite}
+      >
+        Enter the world of Satellite and Debris
+        <span>→</span>
+      </button>
 
     </div>
+
+
+    
+
+  </section>
+)}
+
+      {/* ========================================
+          LOADING SCREEN
+      ======================================== */}
+
+      {showLoading && (
+        <section className="loading-screen">
+
+          <div className="loading-logo">
+            ORBITAL
+          </div>
+
+          <div className="loader-ring" />
+
+          <div className="loading-title">
+            INITIALIZING ORBITAL SYSTEM
+          </div>
+
+          <div className="loading-subtitle">
+            Loading satellite intelligence...
+          </div>
+
+        </section>
+      )}
+
+      {/* ========================================
+          EXISTING WEBSITE
+      ======================================== */}
+
+      {!showIntro && !showLoading && (
+        <div className="app-shell">
+
+          {/* ALWAYS VISIBLE DASHBOARD */}
+          <header className="topbar">
+
+            <button
+              className="wordmark"
+              onClick={() =>
+                setTab('Mission control')
+              }
+            >
+              <i>◌</i>
+
+              <span>
+                ORBITAL<br />
+                <small>INTELLIGENCE</small>
+              </span>
+            </button>
+
+            <nav>
+              {tabs.map(x => (
+                <button
+                  className={
+                    tab === x
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setTab(x)
+                  }
+                  key={x}
+                >
+                  {x}
+                </button>
+              ))}
+            </nav>
+
+            <div className="system-live">
+              <b /> SYSTEM NOMINAL
+            </div>
+
+          </header>
+
+          {/* CONTENT BELOW DASHBOARD */}
+          <main>
+
+            <div
+              className={
+                tab === 'Mission control'
+                  ? ''
+                  : 'hidden-page'
+              }
+            >
+              <SpaceView />
+            </div>
+
+            {tab === 'Catalog' && (
+              <Catalog />
+            )}
+
+            {tab === 'Screening' && (
+              <Screening />
+            )}
+
+            {tab === 'Heatmap' && (
+              <Heatmap />
+            )}
+
+            {tab === 'Methodology' && (
+              <Methodology />
+            )}
+
+          </main>
+
+          <footer>
+            <span>
+              ORBITAL INTELLIGENCE / SIH 2026
+            </span>
+
+            <span>
+              SGP4 PROPAGATION ·
+              CATALOGUE-BASED SCREENING
+            </span>
+
+            <span>
+              NOT FOR OPERATIONAL
+              COLLISION AVOIDANCE
+            </span>
+          </footer>
+
+        </div>
+      )}
+    </>
   )
 }
