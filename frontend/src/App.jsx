@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import SpaceView from './components/SpaceView'
 import earthTexture from './assets/earth-texture.png'
 import './App.css'
@@ -48,14 +48,23 @@ function Heatmap() {
   const [debris, setDebris] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
   const load = async () => {
     setLoading(true)
     setError('')
+
     try {
       const response = await fetch(`${API}/api/heatmap`)
-      if (!response.ok) throw new Error(`Heatmap service returned ${response.status}`)
+      if (!response.ok) {
+        throw new Error(`Heatmap service returned ${response.status}`)
+      }
+
       const result = await response.json()
-      if (!Array.isArray(result.satellite) || !Array.isArray(result.debris)) throw new Error('Heatmap data is incomplete')
+
+      if (!Array.isArray(result.satellite) || !Array.isArray(result.debris)) {
+        throw new Error('Heatmap data is incomplete')
+      }
+
       setData(result)
     } catch (loadError) {
       setError('Unable to reach the heatmap service. Restart the backend, then refresh this page.')
@@ -63,25 +72,443 @@ function Heatmap() {
       setLoading(false)
     }
   }
-  useEffect(() => { load(); const interval = setInterval(load, 60000); return () => clearInterval(interval) }, [])
-  const satelliteMaximum = useMemo(() => data ? Math.max(1, ...data.satellite) : 1, [data])
-  const debrisMaximum = useMemo(() => data ? Math.max(1, ...data.debris) : 1, [data])
-  const intensity = (value, maximum) => Math.min(.82, Math.pow(Math.max(0, (value - 1) / Math.max(1, maximum - 1)), 1.7) * .82)
-  const mapStyle = { backgroundImage: `url(${earthTexture})` }
-  const gridStyle = data ? { gridTemplateColumns: `repeat(${data.columns}, 1fr)`, gridTemplateRows: `repeat(${data.rows}, 1fr)` } : undefined
+
+  useEffect(() => {
+    load()
+
+    const interval = setInterval(load, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const satelliteMaximum = useMemo(
+    () => data ? Math.max(1, ...data.satellite) : 1,
+    [data]
+  )
+
+  const debrisMaximum = useMemo(
+    () => data ? Math.max(1, ...data.debris) : 1,
+    [data]
+  )
+
+  const intensity = (value, maximum) =>
+    Math.min(
+      0.88,
+      Math.pow(
+        Math.max(0, (value - 1) / Math.max(1, maximum - 1)),
+        1.7
+      ) * 0.88
+    )
+
+  const mapStyle = {
+    backgroundImage: `url(${earthTexture})`
+  }
+
+  const gridStyle = data
+    ? {
+        gridTemplateColumns: `repeat(${data.columns}, 1fr)`,
+        gridTemplateRows: `repeat(${data.rows}, 1fr)`
+      }
+    : undefined
+
+  const totalSatelliteObjects = data
+    ? data.satellite.reduce((sum, value) => sum + value, 0)
+    : 0
+
+  const totalDebrisObjects = data
+    ? data.debris.reduce((sum, value) => sum + value, 0)
+    : 0
 
   return (
-    <section className="content-page heatmap-page">
-      <div className="page-intro"><div><span>ORBITAL DENSITY HEATMAP</span><h1>Where is the near-Earth population concentrated?</h1><p>A current latitude–longitude density view of the propagated catalogue.</p></div><button className="primary-button" onClick={load}>{loading ? 'UPDATING…' : 'REFRESH MAP'}</button></div>
-      <div className="heatmap-controls"><button className={active ? 'enabled satellite-toggle' : ''} onClick={() => setActive(value => !value)}><i /> Satellites</button><button className={debris ? 'enabled debris-toggle' : ''} onClick={() => setDebris(value => !value)}><i /> Debris</button><span>Darker colour = greater concentration</span></div>
-      {error && <div className="heatmap-error">{error}</div>}
-      <div className="flat-earth" style={mapStyle}>
-        {data && <div className="heat-grid" style={gridStyle}>{data.satellite.map((value, index) => { const satelliteIntensity = intensity(value, satelliteMaximum); const debrisIntensity = intensity(data.debris[index], debrisMaximum); return <div className="heat-cell" key={index}>{active && satelliteIntensity > .025 && <i className="satellite-heat" style={{ opacity: satelliteIntensity }} />}{debris && debrisIntensity > .025 && <i className="debris-heat" style={{ opacity: debrisIntensity }} />}</div> })}</div>}
-        <div className="map-coordinates"><span>180°W</span><span>0°</span><span>180°E</span></div>
+    <section className="heatmap-fullscreen">
+
+      {/* TOP HUD */}
+      <div className="heatmap-topbar">
+
+        <div className="heatmap-title">
+          <span>ORBITAL DENSITY HEATMAP</span>
+          <h1>Near-Earth population density</h1>
+          <p>
+            Propagated catalogue distribution across latitude and longitude.
+          </p>
+        </div>
+
+        <div className="heatmap-stats">
+
+          <div>
+            <strong>{totalSatelliteObjects.toLocaleString()}</strong>
+            <span>ACTIVE OBJECTS</span>
+          </div>
+
+          <div>
+            <strong className="debris-stat">
+              {totalDebrisObjects.toLocaleString()}
+            </strong>
+            <span>DEBRIS OBJECTS</span>
+          </div>
+
+          <div>
+            <strong>{data ? data.columns * data.rows : '—'}</strong>
+            <span>SPATIAL CELLS</span>
+          </div>
+
+        </div>
+
       </div>
-      <div className="heatmap-legend"><span><i className="satellite-heat" /> Satellite density</span><span><i className="debris-heat" /> Debris density</span><p>Current epoch: {data ? new Date(data.timestamp).toLocaleString() : 'Loading catalogue…'}</p></div>
+
+      {/* RIGHT CONTROLS */}
+      <div className="heatmap-hud heatmap-right">
+
+        <div className="hud-label">
+          VIEW LAYERS
+        </div>
+
+        <button
+          className={active ? 'hud-toggle active' : 'hud-toggle'}
+          onClick={() => setActive(value => !value)}
+        >
+          <i className="satellite-dot" />
+          Satellites
+        </button>
+
+        <button
+          className={debris ? 'hud-toggle active' : 'hud-toggle'}
+          onClick={() => setDebris(value => !value)}
+        >
+          <i className="debris-dot" />
+          Debris
+        </button>
+
+        <div className="hud-divider" />
+
+        <button
+          className="hud-action"
+          onClick={load}
+        >
+          {loading ? 'UPDATING...' : '↻ REFRESH'}
+        </button>
+
+      </div>
+
+      {/* ERROR */}
+      {error && (
+        <div className="heatmap-error-overlay">
+          {error}
+        </div>
+      )}
+
+      {/* FULL SCREEN MAP */}
+      <div
+        className="heatmap-map"
+        style={mapStyle}
+      >
+
+        {data && (
+          <div
+            className="heat-grid"
+            style={gridStyle}
+          >
+            {data.satellite.map((value, index) => {
+
+              const satelliteIntensity =
+                intensity(value, satelliteMaximum)
+
+              const debrisIntensity =
+                intensity(data.debris[index], debrisMaximum)
+
+              return (
+                <div
+                  className="heat-cell"
+                  key={index}
+                >
+
+                  {active && satelliteIntensity > 0.02 && (
+                    <i
+                      className="satellite-heat"
+                      style={{
+                        opacity: satelliteIntensity
+                      }}
+                    />
+                  )}
+
+                  {debris && debrisIntensity > 0.02 && (
+                    <i
+                      className="debris-heat"
+                      style={{
+                        opacity: debrisIntensity
+                      }}
+                    />
+                  )}
+
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* MAP VIGNETTE */}
+        <div className="heatmap-vignette" />
+
+        {/* COORDINATES */}
+        <div className="map-coordinates">
+          <span>180°W</span>
+          <span>120°W</span>
+          <span>60°W</span>
+          <span>0°</span>
+          <span>60°E</span>
+          <span>120°E</span>
+          <span>180°E</span>
+        </div>
+
+      </div>
+
+      {/* LEFT BOTTOM LEGEND */}
+      <div className="heatmap-hud heatmap-bottom-left">
+
+        <div className="hud-label">
+          DENSITY SCALE · OBJECTS / CELL
+        </div>
+
+        <div className="density-gradient" />
+
+        <div className="density-labels">
+          <span>LOW</span>
+          <span>MEDIUM</span>
+          <span>HIGH</span>
+        </div>
+
+        <div className="heatmap-legend-row">
+          <span>
+            <i className="satellite-dot" />
+            Satellite density
+          </span>
+
+          <span>
+            <i className="debris-dot" />
+            Debris density
+          </span>
+        </div>
+
+      </div>
+
+      {/* BOTTOM RIGHT INFO */}
+      <div className="heatmap-hud heatmap-bottom-right">
+
+        <div className="hud-label">
+          DATA STATUS
+        </div>
+
+        <div className="live-status">
+          <i />
+          LIVE CATALOGUE
+        </div>
+
+        <small>
+          {data
+            ? `Updated ${new Date(data.timestamp).toLocaleString()}`
+            : 'Loading catalogue...'}
+        </small>
+
+      </div>
+
     </section>
   )
 }
 function Methodology(){return <section className="content-page methodology"><span>METHOD & LIMITATIONS</span><h1>Designed for awareness, not autonomous decisions.</h1><div className="method-grid"><article><b>01</b><h2>Orbit propagation</h2><p>Satellite.js uses SGP4 propagation with the loaded GP element set. The 3D view uses an Earth-centred inertial frame so orbital geometry does not twist with the rotating Earth.</p></article><article><b>02</b><h2>Relative motion</h2><p>The comparison screen samples both propagated state vectors over a 24-hour horizon, then refines the closest sampled approach.</p></article><article><b>03</b><h2>Estimated collision likelihood</h2><p>High, Medium, Low and Very Low combine propagated separation, relative velocity, nearby debris concentration and element freshness. They are qualitative prototype indicators, not an operational probability of collision.</p></article></div></section>}
-export default function App(){const [tab,setTab]=useState('Mission control');return <div className="app-shell"><header className="topbar"><button className="wordmark" onClick={()=>setTab('Mission control')}><i>◌</i><span>ORBITAL<br/><small>INTELLIGENCE</small></span></button><nav>{tabs.map(x=><button className={tab===x?'active':''} onClick={()=>setTab(x)} key={x}>{x}</button>)}</nav><div className="system-live"><b/> SYSTEM NOMINAL</div></header><main><div className={tab==='Mission control'?'':'hidden-page'}><SpaceView/></div>{tab==='Catalog'&&<Catalog/>}{tab==='Screening'&&<Screening/>}{tab==='Heatmap'&&<Heatmap/>}{tab==='Methodology'&&<Methodology/>}</main><footer><span>ORBITAL INTELLIGENCE / SIH 2026</span><span>SGP4 PROPAGATION · CATALOGUE-BASED SCREENING</span><span>NOT FOR OPERATIONAL COLLISION AVOIDANCE</span></footer></div>}
+export default function App() {
+  const [tab, setTab] = useState('Mission control')
+
+  const [showIntro, setShowIntro] = useState(true)
+  const [showLoading, setShowLoading] = useState(false)
+
+  const enterWebsite = () => {
+    setShowIntro(false)
+    setShowLoading(true)
+
+    setTimeout(() => {
+      setShowLoading(false)
+      setTab('Mission control')
+    }, 2200)
+  }
+
+  return (
+    <>
+      {/* ========================================
+          INTRO SCREEN
+      ======================================== */}
+
+      {showIntro && (
+  <section className="intro-screen">
+
+    <video
+      className="intro-video"
+      autoPlay
+      muted
+      loop
+      playsInline
+    >
+      <source
+        src="/earth.mp4"
+        type="video/mp4"
+      />
+    </video>
+
+    <div className="intro-overlay" />
+
+    <div className="intro-content">
+
+      <div className="intro-brand">
+        ORBITAL
+      </div>
+
+      <div className="intro-kicker">
+        SPACE INTELLIGENCE
+      </div>
+
+      <h1>
+        The Orbital Frontier
+      </h1>
+
+      <p>
+        Enter the world of Satellite and Debris
+      </p>
+
+      <button
+        className="enter-button"
+        onClick={enterWebsite}
+      >
+        Enter the world of Satellite and Debris
+        <span>→</span>
+      </button>
+
+    </div>
+
+
+    
+
+  </section>
+)}
+
+      {/* ========================================
+          LOADING SCREEN
+      ======================================== */}
+
+      {showLoading && (
+        <section className="loading-screen">
+
+          <div className="loading-logo">
+            ORBITAL
+          </div>
+
+          <div className="loader-ring" />
+
+          <div className="loading-title">
+            INITIALIZING ORBITAL SYSTEM
+          </div>
+
+          <div className="loading-subtitle">
+            Loading satellite intelligence...
+          </div>
+
+        </section>
+      )}
+
+      {/* ========================================
+          EXISTING WEBSITE
+      ======================================== */}
+
+      {!showIntro && !showLoading && (
+        <div className="app-shell">
+
+          {/* ALWAYS VISIBLE DASHBOARD */}
+          <header className="topbar">
+
+            <button
+              className="wordmark"
+              onClick={() =>
+                setTab('Mission control')
+              }
+            >
+              <i>◌</i>
+
+              <span>
+                ORBITAL<br />
+                <small>INTELLIGENCE</small>
+              </span>
+            </button>
+
+            <nav>
+              {tabs.map(x => (
+                <button
+                  className={
+                    tab === x
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setTab(x)
+                  }
+                  key={x}
+                >
+                  {x}
+                </button>
+              ))}
+            </nav>
+
+            <div className="system-live">
+              <b /> SYSTEM NOMINAL
+            </div>
+
+          </header>
+
+          {/* CONTENT BELOW DASHBOARD */}
+          <main>
+
+            <div
+              className={
+                tab === 'Mission control'
+                  ? ''
+                  : 'hidden-page'
+              }
+            >
+              <SpaceView />
+            </div>
+
+            {tab === 'Catalog' && (
+              <Catalog />
+            )}
+
+            {tab === 'Screening' && (
+              <Screening />
+            )}
+
+            {tab === 'Heatmap' && (
+              <Heatmap />
+            )}
+
+            {tab === 'Methodology' && (
+              <Methodology />
+            )}
+
+          </main>
+
+          <footer>
+            <span>
+              ORBITAL INTELLIGENCE / SIH 2026
+            </span>
+
+            <span>
+              SGP4 PROPAGATION ·
+              CATALOGUE-BASED SCREENING
+            </span>
+
+            <span>
+              NOT FOR OPERATIONAL
+              COLLISION AVOIDANCE
+            </span>
+          </footer>
+
+        </div>
+      )}
+    </>
+  )
+}
