@@ -23,3 +23,127 @@
 .debris-watch-panel { margin-top:23px; padding:15px; border:1px solid #2a647f; border-radius:6px; background:#0d2332; }.debris-watch-panel h3 { margin:0 0 12px; color:#82c8df; font:11px 'DM Mono'; letter-spacing:1px; }.debris-watch-panel p { margin:0; color:#9bb8c8; font-size:12px; line-height:1.5; }
 .watch-result { display:grid; grid-template-columns:1fr auto; gap:7px 12px; padding:11px 0; border-top:1px solid #ffffff16; color:#cfe6ee; font-size:12px; }.watch-result:first-of-type { border-top:0; }.watch-result div { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.watch-result i { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; }.watch-result>b { color:#61e4d0; font:11px 'DM Mono'; }.watch-result span { grid-column:1 / -1; color:#8caebe; font-size:11px; }.watch-result.alert>b { color:#ff7880; }.watch-result.alert span { color:#ffb5b9; }
 @media (max-width: 1120px) { .resize-handle { display: none; } }
+
+/* =========================================
+   DISPLAY ONLY: ORBIT A / ORBIT B
+   ========================================= */
+
+.orbit-display {
+  position: absolute;
+
+  left: 72%;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 230px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  z-index: 20;
+
+  pointer-events: none;
+}
+
+
+/* BOX */
+
+.orbit-display-box {
+  padding: 13px 15px;
+
+  background: rgba(7, 16, 29, 0.92);
+
+  backdrop-filter: blur(10px);
+
+  border-radius: 6px;
+}
+
+
+/* ORBIT A */
+
+.orbit-display-a {
+  border: 1px solid #48d7ff;
+
+  box-shadow:
+    0 0 18px rgba(72, 215, 255, 0.12);
+}
+
+
+/* ORBIT B */
+
+.orbit-display-b {
+  border: 1px solid #ffb454;
+
+  box-shadow:
+    0 0 18px rgba(255, 180, 84, 0.12);
+}
+
+
+/* TITLE */
+
+.orbit-display-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 9px;
+
+  color: #edf7fb;
+
+  font: 11px 'DM Mono';
+
+  font-weight: 700;
+
+  letter-spacing: 1.5px;
+}
+
+
+/* DOT */
+
+.orbit-display-dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+}
+
+.orbit-display-a .orbit-display-dot {
+  background: #48d7ff;
+
+  box-shadow: 0 0 9px #48d7ff;
+}
+
+.orbit-display-b .orbit-display-dot {
+  background: #ffb454;
+
+  box-shadow: 0 0 9px #ffb454;
+}
+
+
+/* SATELLITE NAME */
+
+.orbit-display-name {
+  color: #dcecf5;
+
+  font: 12px 'DM Mono';
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+
+/* NORAD */
+
+.orbit-display-norad {
+  margin-top: 5px;
+
+  color: #7895a8;
+
+  font: 9px 'DM Mono';
+
+  letter-spacing: .8px;
+}
