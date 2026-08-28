@@ -62,7 +62,39 @@
 .analysis-rail.collapsed .rail-content {
   display: none;
 }
-.collapse-toggle { position: absolute; z-index: 12; top: 18px; width: 28px; height: 31px; border: 1px solid #4e8aa4; border-radius: 4px; background: #10273a; color: #d5f4ff; font-size: 20px; line-height: 1; }
+.collapse-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  z-index: 50;
+
+  width: 42px;
+  height: 76px;
+
+  border: 1px solid rgba(120, 210, 240, 0.65);
+  border-radius: 12px;
+
+  background: rgba(35, 75, 100, 0.95);
+  color: #e5f8ff;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 0 18px rgba(70, 190, 230, 0.18),
+    inset 0 0 12px rgba(130, 220, 245, 0.08);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
 .collapse-toggle.left { right: 9px; }.collapse-toggle.right { left: 9px; }
 .analysis-rail .metric strong { font-size: 24px; }
 .telemetry-card { margin-top: 12px; padding: 17px 14px; border: 1px solid #2a617e; border-radius: 7px; background: #102131; }
