@@ -320,6 +320,7 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(true)
   const [showLoading, setShowLoading] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [menuIndex, setMenuIndex] = useState(0)
   const enterWebsite = () => {
   setShowIntro(false)
   setShowLoading(true)
@@ -356,28 +357,33 @@ export default function App() {
     <div className="intro-content">
 
       <div className="intro-brand">
-        ORBITAL
+        <h2> ORBITRA  </h2>
       </div>
 
       <div className="intro-kicker">
-        SPACE INTELLIGENCE
+        <h3> SPACE AND DEBRIS INTELLIGENCE </h3>
       </div>
 
       <h1>
-        The Orbital Frontier
+        THE SPACE SENTINEL
       </h1>
 
-      <p>
-        Enter the world of Satellite and Debris
-      </p>
+      <h3>
+        Predict. Detect. Protect.
+      </h3>
 
       <button
-        className="enter-button"
-        onClick={enterWebsite}
-      >
-        Enter the world of Satellite and Debris
-        <span>→</span>
-      </button>
+  className="enter-button"
+  onClick={enterWebsite}
+>
+  <span className="enter-button-text">
+    ENTER THE WORLD OF SATELLITE AND DEBRIS
+  </span>
+
+  <span className="enter-button-arrow">
+    →
+  </span>
+</button>
 
     </div>
 
@@ -440,69 +446,169 @@ export default function App() {
     <p>Select an interface to continue</p>
   </div>
 
-  <div className="menu-options">
+<div className="menu-carousel">
+        <button
+  className="menu-continue"
+  onClick={() => {
 
-    <button
-      onClick={() => {
-        setTab('Mission control')
-        setShowMenu(false)
+    if (menuIndex === 0) {
+      setSpaceMode('visualization')
+      setTab('Mission control')
+    }
+
+    if (menuIndex === 1) {
+      setTab('Catalog')
+    }
+
+    if (menuIndex === 2) {
+      setTab('Screening')
+    }
+
+    if (menuIndex === 3) {
+      setTab('Heatmap')
+    }
+
+    if (menuIndex === 4) {
+      setTab('Methodology')
+    }
+
+    setShowMenu(false)
+  }}
+>
+  ENTER
+  <span>→</span>
+</button>
+  <button
+    className="carousel-arrow carousel-left"
+    onClick={() =>
+      setMenuIndex(
+        (menuIndex - 1 + 5) % 5
+      )
+    }
+  >
+    ‹
+  </button>
+
+  <div className="carousel-window">
+
+    <div
+      className="carousel-track"
+      style={{
+        transform: `translateX(calc(50% - ${menuIndex * 210}px))`
       }}
     >
-      <span>Open Visualization</span>
-      <b>→</b>
-    </button>
 
-    <button
-      onClick={() => {
-        setTab('Catalog')
-        setShowMenu(false)
-      }}
-    >
-      <span>Satellite Search</span>
-      <b>→</b>
-    </button>
+      <button
+        className={`menu-card ${
+          menuIndex === 0 ? 'selected' : ''
+        }`}
+        onClick={() => setMenuIndex(0)}
+      >
+        <span className="menu-card-title">
+          Open Visualization
+        </span>
 
-    <button
-      onClick={() => {
-        setTab('Catalog')
-        setShowMenu(false)
-      }}
-    >
-      <span>Catalog</span>
-      <b>→</b>
-    </button>
+        <span className="menu-card-detail">
+          Explore the 3D orbital environment.
+        </span>
 
-    <button
-      onClick={() => {
-        setTab('Screening')
-        setShowMenu(false)
-      }}
-    >
-      <span>Screening</span>
-      <b>→</b>
-    </button>
+        <span className="menu-card-arrow">
+          →
+        </span>
+      </button>
 
-    <button
-      onClick={() => {
-        setTab('Heatmap')
-        setShowMenu(false)
-      }}
-    >
-      <span>Heatmap</span>
-      <b>→</b>
-    </button>
+      <button
+        className={`menu-card ${
+          menuIndex === 1 ? 'selected' : ''
+        }`}
+        onClick={() => setMenuIndex(1)}
+      >
+        <span className="menu-card-title">
+          Catalog
+        </span>
 
-    <button
-      onClick={() => {
-        setTab('Methodology')
-        setShowMenu(false)
-      }}
-    >
-      <span>Methodology</span>
-      <b>→</b>
-    </button>
+        <span className="menu-card-detail">
+          Browse tracked satellites and orbital objects.
+        </span>
+
+        <span className="menu-card-arrow">
+          →
+        </span>
+      </button>
+
+      <button
+        className={`menu-card ${
+          menuIndex === 2 ? 'selected' : ''
+        }`}
+        onClick={() => setMenuIndex(2)}
+      >
+        <span className="menu-card-title">
+          Screening
+        </span>
+
+        <span className="menu-card-detail">
+          Examine potential conjunction risks.
+        </span>
+
+        <span className="menu-card-arrow">
+          →
+        </span>
+      </button>
+
+      <button
+        className={`menu-card ${
+          menuIndex === 3 ? 'selected' : ''
+        }`}
+        onClick={() => setMenuIndex(3)}
+      >
+        <span className="menu-card-title">
+          Heatmap
+        </span>
+
+        <span className="menu-card-detail">
+          Visualize satellite and debris density.
+        </span>
+
+        <span className="menu-card-arrow">
+          →
+        </span>
+      </button>
+
+      <button
+        className={`menu-card ${
+          menuIndex === 4 ? 'selected' : ''
+        }`}
+        onClick={() => setMenuIndex(4)}
+      >
+        <span className="menu-card-title">
+          Methodology
+        </span>
+
+        <span className="menu-card-detail">
+          Understand the orbital analysis system.
+        </span>
+
+        <span className="menu-card-arrow">
+          →
+        </span>
+      </button>
+
+    </div>
 
   </div>
+
+  <button
+    className="carousel-arrow carousel-right"
+    onClick={() =>
+      setMenuIndex(
+        (menuIndex + 1) % 5
+      )
+    }
+  >
+    ›
+  </button>
+
+</div>
 
 </div>
 

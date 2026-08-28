@@ -196,7 +196,7 @@ body {
 
   gap: 15px !important;
 
-  padding: 15px 25px !important;
+  padding: 15px 100px !important;
 
   border: 1px solid
     rgba(255,255,255,0.45) !important;
@@ -431,68 +431,274 @@ body {
 }
 
 
-/* MENU OPTIONS */
+/* ========================================
+   MENU CAROUSEL
+======================================== */
 
-.menu-options {
-  position: absolute !important;
+.menu-carousel {
+  position: relative;
 
-  top: 50% !important;
-  left: 50% !important;
+  width: 100%;
 
-  transform: translate(-50%, -50%) !important;
+  display: flex;
 
-  width: 850px !important;
-  max-width: 85vw !important;
+  align-items: center;
 
-  display: grid !important;
-
-  grid-template-columns: repeat(3, 1fr) !important;
-
-  column-gap: 70px !important;
-  row-gap: 85px !important;
-
-  z-index: 2 !important;
+  justify-content: center;
 }
 
 
-/* TEXT BUTTONS */
+/* VIEWPORT */
 
-.menu-options button {
-  appearance: none !important;
+.carousel-window {
+  width: 100%;
 
-  border: none !important;
+  overflow: hidden;
 
-  background: transparent !important;
+  padding: 15px 0 25px;
+}
 
-  color: white !important;
 
-  padding: 10px !important;
-  margin: 0 !important;
+/* MOVING TRACK */
 
-  font-family: inherit !important;
+.carousel-track {
+  display: flex;
 
-  font-size: 20px !important;
-  font-weight: 400 !important;
+  align-items: center;
 
-  text-align: center !important;
+  gap: 24px;
 
-  cursor: pointer !important;
-
-  box-shadow: none !important;
-
-  outline: none !important;
+  width: max-content;
 
   transition:
-    opacity 0.25s ease,
-    transform 0.25s ease !important;
+    transform 0.45s cubic-bezier(.22,.61,.36,1);
 }
+
+
+/* ========================================
+   CARDS
+======================================== */
+
+.menu-card {
+  position: relative;
+
+  flex: 0 0 360px;
+
+  height: 170px;
+
+  padding: 25px;
+
+  border: 1px solid
+    rgba(255,255,255,0.28);
+
+  border-radius: 18px;
+
+  background:
+    rgba(20,30,45,0.55);
+
+  color: white;
+
+  backdrop-filter: blur(10px);
+
+  text-align: left;
+
+  cursor: pointer;
+
+  opacity: 0.42;
+
+  transform: scale(0.84);
+
+  transition:
+    transform 0.45s ease,
+    opacity 0.45s ease,
+    background 0.45s ease,
+    border-color 0.45s ease;
+}
+
+
+/* SELECTED / CENTER CARD */
+
+.menu-card.selected {
+  opacity: 1;
+
+  transform: scale(1.05);
+
+  background:
+    rgba(30,50,70,0.72);
+
+  border-color:
+    rgba(255,255,255,0.72);
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.35);
+}
+
+
+/* ========================================
+   CARD TEXT
+======================================== */
+
+.menu-card-title {
+  display: block;
+
+  margin-bottom: 12px;
+
+  font-size: 20px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.3px;
+}
+
+.menu-card-detail {
+  display: block;
+
+  max-width: 250px;
+
+  font-size: 11px;
+
+  line-height: 1.55;
+
+  color:
+    rgba(255,255,255,0.58);
+}
+
+.menu-card-arrow {
+  position: absolute;
+
+  right: 22px;
+  bottom: 20px;
+
+  font-size: 20px;
+
+  color:
+    rgba(255,255,255,0.8);
+}
+
+
+/* ========================================
+   CAROUSEL ARROWS
+======================================== */
+
+.carousel-arrow {
+  position: absolute;
+
+  top: 50%;
+
+  transform:
+    translateY(-50%);
+
+  width: 46px;
+  height: 46px;
+
+  border: 1px solid
+    rgba(255,255,255,0.35);
+
+  border-radius: 50%;
+
+  background:
+    rgba(0,0,0,0.22);
+
+  color: white;
+
+  font-size: 28px;
+
+  font-weight: 300;
+
+  cursor: pointer;
+
+  z-index: 5;
+
+  backdrop-filter: blur(8px);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.carousel-arrow:hover {
+  background:
+    rgba(255,255,255,0.12);
+
+  border-color:
+    rgba(255,255,255,0.75);
+}
+
+.carousel-left {
+  left: -5px;
+}
+
+.carousel-right {
+  right: -5px;
+}
+
+
+/* ========================================
+   ENTER BUTTON
+======================================== */
+
+.menu-continue {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  width: 230px;
+
+  height: 52px;
+
+  margin: 30px auto 0;
+
+  padding: 0 22px;
+
+  border: 1px solid
+    rgba(255,255,255,0.45);
+
+  border-radius: 999px;
+
+  background:
+    rgba(255,255,255,0.08);
+
+  color: white;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  letter-spacing: 2px;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(8px);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.menu-continue:hover {
+  background:
+    rgba(255,255,255,0.16);
+
+  border-color:
+    rgba(255,255,255,0.8);
+}
+
+.menu-continue span {
+  font-size: 18px;
+}
+
+/* MENU OPTIONS */
+
 
 .menu-options button:hover {
-  opacity: 0.65 !important;
+  background: rgba(255,255,255,0.16);
 
-  transform: translateY(-2px) !important;
+  border-color: rgba(255,255,255,0.8);
+
+  transform: translateY(-2px);
 }
-
 
 /* MOBILE */
 
@@ -510,13 +716,16 @@ body {
 
   transform: translate(-50%, -50%);
 
-  width: min(1000px, 88vw);
+  width: min(1200px, 92vw);
 
   text-align: center;
 
   z-index: 2;
 }
 
+.menu-heading {
+  margin-bottom: 35px;
+}
 
 /* ========================================
    MENU HEADING
@@ -574,14 +783,13 @@ body {
 .menu-options {
   display: grid;
 
-  grid-template-columns:
-    repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 
-  gap: 28px;
+  column-gap: 35px;
+  row-gap: 28px;
 
   width: 100%;
 }
-
 
 /* ========================================
    MENU BUTTONS
@@ -641,17 +849,18 @@ body {
 }
 
 .menu-options button b {
-  font-size: 17px;
+  font-size: 18px;
 
   font-weight: 400;
+
+  margin-left: 15px;
 
   transition:
     transform 0.25s ease;
 }
 
 .menu-options button:hover b {
-  transform:
-    translateX(5px);
+  transform: translateX(5px);
 }
 
 
