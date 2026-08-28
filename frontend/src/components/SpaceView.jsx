@@ -106,11 +106,49 @@ function SatelliteMarker({ data, color, active, watch, debrisRecords, onInspect,
       lastWatchUpdate.current = clock.elapsedTime
       let nearest = null
       for (const debris of debrisRecords) {
-        const debrisState = satellite.propagate(debris.rec, now)
-        if (!debrisState?.position) continue
-        const separation = distance(state.position, debrisState.position)
-        if (!nearest || separation < nearest.distanceKm) nearest = { name: debris.name, norad: debris.norad, distanceKm: separation }
+
+  try {
+
+    const debrisState =
+      satellite.propagate(
+        debris.rec,
+        now
+      )
+
+    if (
+      !debrisState?.position
+    ) {
+      continue
+    }
+
+    const separation =
+      distance(
+        state.position,
+        debrisState.position
+      )
+
+    if (
+      !Number.isFinite(separation)
+    ) {
+      continue
+    }
+
+    if (
+      !nearest ||
+      separation <
+        nearest.distanceKm
+    ) {
+      nearest = {
+        name: debris.name,
+        norad: debris.norad,
+        distanceKm: separation
       }
+    }
+
+  } catch {
+    continue
+  }
+}
       onWatchUpdate({ ...nearest, insideRange: Boolean(nearest && nearest.distanceKm <= DEBRIS_WATCH_RADIUS_KM) })
     }
   })
@@ -217,11 +255,137 @@ useFrame(() => {
   )
 }
 function screenPair(first, second) {
-  const now = new Date(), a = satellite.json2satrec(first), b = satellite.json2satrec(second); let best = null
-  const check = time => { const l = satellite.propagate(a, time), r = satellite.propagate(b, time); if (!l?.position || !r?.position) return; const d = distance(l.position, r.position); if (!best || d < best.distance) best = { distance: d, time, relativeSpeed: mag({ x: l.velocity.x - r.velocity.x, y: l.velocity.y - r.velocity.y, z: l.velocity.z - r.velocity.z }) } }
-  for (let m = 0; m <= 1440; m += 2) check(new Date(now.getTime() + m * 60000)); if (best) { const centre = best.time; for (let s = -120; s <= 120; s += 5) check(new Date(centre.getTime() + s * 1000)) }; if (!best) return null
-  const ca = satellite.propagate(a, now), cb = satellite.propagate(b, now)
-  return { ...best, currentDistance: distance(ca.position, cb.position), currentSpeed: mag({ x: ca.velocity.x - cb.velocity.x, y: ca.velocity.y - cb.velocity.y, z: ca.velocity.z - cb.velocity.z }), hours: (best.time - now) / 3600000 }
+  if (!first || !second) return null
+
+  try {
+    const a = satellite.json2satrec(first)
+    const b = satellite.json2satrec(second)
+
+    const now = new Date()
+
+    let best = null
+
+    const check = (time) => {
+      try {
+        const l = satellite.propagate(a, time)
+        const r = satellite.propagate(b, time)
+
+        if (
+          !l?.position ||
+          !l?.velocity ||
+          !r?.position ||
+          !r?.velocity
+        ) {
+          return
+        }
+
+        const d = distance(
+          l.position,
+          r.position
+        )
+
+        const relativeSpeed = mag({
+          x: l.velocity.x - r.velocity.x,
+          y: l.velocity.y - r.velocity.y,
+          z: l.velocity.z - r.velocity.z
+        })
+
+        if (
+          !Number.isFinite(d) ||
+          !Number.isFinite(relativeSpeed)
+        ) {
+          return
+        }
+
+        if (
+          !best ||
+          d < best.distance
+        ) {
+          best = {
+            distance: d,
+            time,
+            relativeSpeed
+          }
+        }
+
+      } catch {
+        // Ignore invalid propagation sample
+      }
+    }
+
+    // Search next 24 hours
+    for (
+      let m = 0;
+      m <= 1440;
+      m += 2
+    ) {
+      check(
+        new Date(
+          now.getTime() +
+          m * 60000
+        )
+      )
+    }
+
+    if (!best) return null
+
+    // Refine around closest approach
+    const centre = best.time
+
+    for (
+      let s = -120;
+      s <= 120;
+      s += 5
+    ) {
+      check(
+        new Date(
+          centre.getTime() +
+          s * 1000
+        )
+      )
+    }
+
+    const ca = satellite.propagate(a, now)
+    const cb = satellite.propagate(b, now)
+
+    if (
+      !ca?.position ||
+      !ca?.velocity ||
+      !cb?.position ||
+      !cb?.velocity
+    ) {
+      return null
+    }
+
+    const currentDistance =
+      distance(
+        ca.position,
+        cb.position
+      )
+
+    const currentSpeed =
+      mag({
+        x: ca.velocity.x - cb.velocity.x,
+        y: ca.velocity.y - cb.velocity.y,
+        z: ca.velocity.z - cb.velocity.z
+      })
+
+    return {
+      ...best,
+      currentDistance,
+      currentSpeed,
+      hours:
+        (best.time - now) / 3600000
+    }
+
+  } catch (error) {
+    console.error(
+      'Satellite screening error:',
+      error
+    )
+
+    return null
+  }
 }
 
 function Search({ catalog, label, selected, color, onSelect }) {
@@ -303,8 +467,42 @@ export default function SpaceView() {
   B: null
 })
   useEffect(() => { fetch(`${API}/api/orbital-data`).then(r => r.ok ? r.json() : Promise.reject()).then(setCatalog).catch(() => setError('Catalog service is offline. Start the backend on port 3000.')) }, [])
-  useEffect(() => { if (!selected[0] || !selected[1]) return setScreening(null); const run = () => setScreening(screenPair(selected[0], selected[1])); run(); const id = setInterval(run, 30000); return () => clearInterval(id) }, [selected])
-    useEffect(() => {
+  
+  useEffect(() => {
+
+  if (!selected[0] || !selected[1]) {
+    setScreening(null)
+    return
+  }
+
+  let cancelled = false
+
+  const run = () => {
+
+    const result =
+      screenPair(
+        selected[0],
+        selected[1]
+      )
+
+    if (!cancelled) {
+      setScreening(result)
+    }
+  }
+
+  run()
+
+  const id =
+    setInterval(run, 30000)
+
+  return () => {
+    cancelled = true
+    clearInterval(id)
+  }
+
+}, [selected])
+
+  useEffect(() => {
   const loadObjectInfo = async () => {
 
     const [infoA, infoB] = await Promise.all([
@@ -322,9 +520,52 @@ export default function SpaceView() {
 }, [selected])
 
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
-  const watchRecords = useMemo(() => catalog.filter(item => item.OBJECT_TYPE === 'DEBRIS').slice(0, 1200).map(item => ({ name: item.OBJECT_NAME, norad: item.NORAD_CAT_ID, rec: satellite.json2satrec(item) })), [catalog])
-  const choose = (index, item) => { setSelected(old => old.map((x, i) => i === index ? item : x)); setDebrisWatch(old => old.map((x, i) => i === index ? null : x)); setInspection(null) }
-  const inspect = (value, color) => setInspection({ ...value, color })
+  const watchRecords = useMemo(() => {
+
+  return catalog
+    .filter(
+      item =>
+        item.OBJECT_TYPE === 'DEBRIS'
+    )
+    .slice(0, 1200)
+    .map(item => {
+
+      try {
+        return {
+          name: item.OBJECT_NAME,
+          norad: item.NORAD_CAT_ID,
+          rec: satellite.json2satrec(item)
+        }
+      } catch {
+        return null
+      }
+
+    })
+    .filter(Boolean)
+
+}, [catalog])
+  const choose = (index, item) => {
+
+  // Clear old analysis immediately
+  setScreening(null)
+
+  // Clear old satellite inspection
+  setInspection(null)
+
+  // Clear debris warning for this slot
+  setDebrisWatch(old =>
+    old.map((x, i) =>
+      i === index ? null : x
+    )
+  )
+
+  // Replace selected satellite
+  setSelected(old =>
+    old.map((x, i) =>
+      i === index ? item : x
+    )
+  )
+}
   const handleSwarmClick = (satelliteData) => {
     // 1. Set the raw clicked satellite as Object A in the left panel
     setSelected(prev => [satelliteData, prev[1]]);

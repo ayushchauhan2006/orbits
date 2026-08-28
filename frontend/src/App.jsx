@@ -447,37 +447,8 @@ export default function App() {
   </div>
 
 <div className="menu-carousel">
-        <button
-  className="menu-continue"
-  onClick={() => {
 
-    if (menuIndex === 0) {
-      setSpaceMode('visualization')
-      setTab('Mission control')
-    }
-
-    if (menuIndex === 1) {
-      setTab('Catalog')
-    }
-
-    if (menuIndex === 2) {
-      setTab('Screening')
-    }
-
-    if (menuIndex === 3) {
-      setTab('Heatmap')
-    }
-
-    if (menuIndex === 4) {
-      setTab('Methodology')
-    }
-
-    setShowMenu(false)
-  }}
->
-  ENTER
-  <span>→</span>
-</button>
+  {/* LEFT ARROW */}
   <button
     className="carousel-arrow carousel-left"
     onClick={() =>
@@ -489,114 +460,187 @@ export default function App() {
     ‹
   </button>
 
+
+  {/* CARDS */}
   <div className="carousel-window">
 
     <div
-      className="carousel-track"
-      style={{
-        transform: `translateX(calc(50% - ${menuIndex * 210}px))`
-      }}
-    >
+  className="carousel-track"
+  style={{
+    transform: `translateX(calc(-215px - ${menuIndex * 462}px))`
+  }}
+>
 
+      {/* 1. OPEN VISUALIZATION */}
       <button
         className={`menu-card ${
           menuIndex === 0 ? 'selected' : ''
         }`}
-        onClick={() => setMenuIndex(0)}
+        onClick={() => {
+          setMenuIndex(0)
+          setTab('Mission control')
+          setShowMenu(false)
+        }}
       >
+
+        <span className="menu-card-icon">
+          ◉
+        </span>
+
         <span className="menu-card-title">
           Open Visualization
         </span>
 
         <span className="menu-card-detail">
-          Explore the 3D orbital environment.
+          Explore the Earth-centered 3D orbital environment,
+observe active satellites in motion, and inspect
+individual objects and their surrounding space.
         </span>
 
         <span className="menu-card-arrow">
           →
         </span>
+
       </button>
 
+
+      {/* 2. CATALOG */}
       <button
         className={`menu-card ${
           menuIndex === 1 ? 'selected' : ''
         }`}
-        onClick={() => setMenuIndex(1)}
+        onClick={() => {
+          setMenuIndex(1)
+          setTab('Catalog')
+          setShowMenu(false)
+        }}
       >
+
+        <span className="menu-card-icon">
+          ⌑
+        </span>
+
         <span className="menu-card-title">
           Catalog
         </span>
 
         <span className="menu-card-detail">
-          Browse tracked satellites and orbital objects.
+          Browse tracked satellites and orbital objects,
+inspect their identifiers, altitude, position and
+other available catalogue information.
         </span>
 
         <span className="menu-card-arrow">
           →
         </span>
+
       </button>
 
+
+      {/* 3. SCREENING */}
       <button
         className={`menu-card ${
           menuIndex === 2 ? 'selected' : ''
         }`}
-        onClick={() => setMenuIndex(2)}
+        onClick={() => {
+          setMenuIndex(2)
+          setTab('Screening')
+          setShowMenu(false)
+        }}
       >
+
+        <span className="menu-card-icon">
+          ⚠
+        </span>
+
         <span className="menu-card-title">
           Screening
         </span>
 
         <span className="menu-card-detail">
-          Examine potential conjunction risks.
+          Examine potential conjunction events using
+          separation, relative velocity and nearby
+          debris indicators across the catalogue.
         </span>
 
         <span className="menu-card-arrow">
           →
         </span>
+
       </button>
 
+
+      {/* 4. HEATMAP */}
       <button
         className={`menu-card ${
           menuIndex === 3 ? 'selected' : ''
         }`}
-        onClick={() => setMenuIndex(3)}
+        onClick={() => {
+          setMenuIndex(3)
+          setTab('Heatmap')
+          setShowMenu(false)
+        }}
       >
+
+        <span className="menu-card-icon">
+          ◈
+        </span>
+
         <span className="menu-card-title">
           Heatmap
         </span>
 
         <span className="menu-card-detail">
-          Visualize satellite and debris density.
+          Visualize the spatial distribution of
+          active satellites and debris across the
+          near-Earth orbital environment.
         </span>
 
         <span className="menu-card-arrow">
           →
         </span>
+
       </button>
 
+
+      {/* 5. METHODOLOGY */}
       <button
         className={`menu-card ${
           menuIndex === 4 ? 'selected' : ''
         }`}
-        onClick={() => setMenuIndex(4)}
+        onClick={() => {
+          setMenuIndex(4)
+          setTab('Methodology')
+          setShowMenu(false)
+        }}
       >
+
+        <span className="menu-card-icon">
+          ⓘ
+        </span>
+
         <span className="menu-card-title">
           Methodology
         </span>
 
         <span className="menu-card-detail">
-          Understand the orbital analysis system.
+          Understand how orbital propagation,
+          relative motion and collision-risk
+          indicators are calculated by the system.
         </span>
 
         <span className="menu-card-arrow">
           →
         </span>
+
       </button>
 
     </div>
 
   </div>
 
+
+  {/* RIGHT ARROW */}
   <button
     className="carousel-arrow carousel-right"
     onClick={() =>
