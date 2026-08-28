@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import * as satellite from 'satellite.js'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { Line, OrbitControls, Stars, useGLTF } from '@react-three/drei'
+import { Line, OrbitControls, Stars } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 import earthModel from '../assets/earth.glb'
@@ -41,51 +41,22 @@ const mag = v => Math.hypot(v.x, v.y, v.z)
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
 
 function Earth() {
-  const { scene } = useGLTF(earthModel)
-  const texture = useLoader(THREE.TextureLoader, earthTexture)
   const earthRef = useRef()
 
+  const texture = useLoader(
+    THREE.TextureLoader,
+    earthTexture
+  )
+
   useEffect(() => {
-    if (!scene || !texture) return
+    if (!texture) return
 
     texture.colorSpace = THREE.SRGBColorSpace
+    texture.wrapS = THREE.ClampToEdgeWrapping
+    texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = 8
     texture.needsUpdate = true
-
-    scene.visible = true
-
-    // Keep the Earth centered
-    scene.position.set(0, 0, 0)
-    scene.rotation.set(0, 0, 0)
-
-    // Scale Earth correctly
-    const box = new THREE.Box3().setFromObject(scene)
-    const size = new THREE.Vector3()
-
-    box.getSize(size)
-
-    const diameter = Math.max(
-      size.x,
-      size.y,
-      size.z
-    )
-
-    if (diameter > 0) {
-      scene.scale.setScalar(6.4 / diameter)
-    }
-
-    // Apply Earth texture
-    scene.traverse((child) => {
-      if (!child.isMesh) return
-
-      child.visible = true
-      child.frustumCulled = false
-
-      child.material = new THREE.MeshBasicMaterial({
-        map: texture,
-        side: THREE.DoubleSide
-      })
-    })
-  }, [scene, texture])
+  }, [texture])
 
   useFrame((_, delta) => {
     if (earthRef.current) {
@@ -94,11 +65,16 @@ function Earth() {
   })
 
   return (
-    <primitive
-      ref={earthRef}
-      object={scene}
-      position={[0, 0, 0]}
-    />
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[3.2, 96, 96]} />
+
+      <meshStandardMaterial
+        map={texture}
+        color="#ffffff"
+        roughness={0.85}
+        metalness={0}
+      />
+    </mesh>
   )
 }
 
