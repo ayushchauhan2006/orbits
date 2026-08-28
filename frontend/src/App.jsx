@@ -403,7 +403,7 @@ export default function App() {
         <section className="loading-screen">
 
           <div className="loading-logo">
-            ORBITAL
+            ORBITRA
           </div>
 
           <div className="loader-ring" />
