@@ -31,9 +31,8 @@
 .orbit-display {
   position: absolute;
 
-  left: 72%;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 24px;
+  bottom: 70px;
 
   width: 230px;
 
@@ -41,11 +40,10 @@
   flex-direction: column;
   gap: 10px;
 
-  z-index: 20;
+  z-index: 30;
 
   pointer-events: none;
 }
-
 
 /* BOX */
 
@@ -146,4 +144,129 @@
   font: 9px 'DM Mono';
 
   letter-spacing: .8px;
+}
+/* =========================================
+   SCREENING CONTEXT - RIGHT PANEL
+   ========================================= */
+
+.screening-context {
+  margin-top: 16px;
+  padding: 14px 15px;
+
+  border: 1px solid #1b4258;
+  background: rgba(10, 25, 40, 0.75);
+
+  border-radius: 2px;
+}
+
+.screening-context > span {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #8bc7df;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+}
+
+.screening-context p {
+  margin: 0;
+
+  color: #7895a8;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  line-height: 1.6;
+}
+/* =========================================
+   SELECTED OBJECT DESCRIPTIONS
+   ========================================= */
+
+.selected-object-info {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #183247;
+}
+
+.selected-object-info h3 {
+  margin: 0 0 12px;
+
+  color: #8bc7df;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+}
+
+.object-description-card {
+  margin-bottom: 10px;
+  padding: 12px;
+
+  background: rgba(8, 20, 32, 0.8);
+
+  border: 1px solid #1b4258;
+  border-radius: 3px;
+}
+
+.object-description-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 8px;
+
+  color: #9bb9c9;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+
+  letter-spacing: 1.2px;
+}
+
+.object-description-header i {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+}
+
+.object-description-card > strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #e2f2f8;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+
+.object-description-card > small {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #607f91;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.object-description-card > p {
+  margin: 0;
+
+  color: #829eae;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  line-height: 1.55;
 }

@@ -5,9 +5,32 @@ import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { Line, OrbitControls, Stars } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
+import earthModel from '../assets/earth.glb'
 import earthTexture from '../assets/earth-texture.png'
 import './SpaceView.css'
 import './MissionPolish.css'
+
+async function fetchSatelliteInfo(noradId) {
+  if (!noradId) return null
+
+  try {
+    const response = await fetch(
+      `https://celestrak.org/satcat/records.php?CATNR=${noradId}&FORMAT=JSON`
+    )
+
+    if (!response.ok) {
+      throw new Error('CelesTrak request failed')
+    }
+
+    const data = await response.json()
+
+    return Array.isArray(data) ? data[0] : data
+  } catch (error) {
+    console.error('CelesTrak SATCAT error:', error)
+    return null
+  }
+}
+
 
 
 const API = 'http://localhost:3000', RADIUS = 6378.137, DISPLAY = 3.2, SCALE = DISPLAY / RADIUS
@@ -18,13 +41,46 @@ const mag = v => Math.hypot(v.x, v.y, v.z)
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
 
 function Earth() {
-  const mesh = useRef(), texture = useLoader(THREE.TextureLoader, earthTexture)
-  texture.colorSpace = THREE.SRGBColorSpace
-  useFrame((_, delta) => { if (mesh.current) mesh.current.rotation.y += delta * .035 })
-  return <group><mesh ref={mesh}><sphereGeometry args={[DISPLAY, 64, 64]} />
-  <meshStandardMaterial map={texture} roughness={.7} metalness={.05} emissive="#061827" emissiveIntensity={.34} /></mesh><mesh scale={1.012}><sphereGeometry args={[DISPLAY, 64, 64]} />
-  <meshBasicMaterial color="#67ceff" transparent opacity={0.14} side={THREE.BackSide} /></mesh></group>
+  const earthRef = useRef()
+
+  const texture = useLoader(
+    THREE.TextureLoader,
+    earthTexture
+  )
+
+  useEffect(() => {
+    if (!texture) return
+
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.wrapS = THREE.ClampToEdgeWrapping
+    texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.anisotropy = 8
+    texture.needsUpdate = true
+  }, [texture])
+
+  useFrame((_, delta) => {
+    if (earthRef.current) {
+      earthRef.current.rotation.y += delta * 0.02
+    }
+  })
+
+  return (
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[3.2, 96, 96]} />
+
+      <meshStandardMaterial
+        map={texture}
+        color="#ffffff"
+        roughness={0.85}
+        metalness={0}
+      />
+    </mesh>
+  )
 }
+
+
+
+useGLTF.preload(earthModel)
 
 function Orbit({ data, color }) {
   const points = useMemo(() => {
@@ -171,7 +227,16 @@ function screenPair(first, second) {
 function Search({ catalog, label, selected, color, onSelect }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
-  return <div className="object-picker"><label>{label}</label><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Name or NORAD ID" />{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm(x.OBJECT_NAME) }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
+  return <div className="object-picker"><label>{label}</label><input
+  value={selected ? selected.OBJECT_NAME : term}
+  onChange={e => {
+    if (selected) {
+      onSelect(null)
+    }
+    setTerm(e.target.value)
+  }}
+  placeholder="Name or NORAD ID"
+/>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => {  onSelect(x); setTerm('')}}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
 const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
@@ -233,8 +298,29 @@ function OrbitDisplay({ selected }) {
 export default function SpaceView() {
   const [catalog, setCatalog] = useState([]), [selected, setSelected] = useState([null, null]), [inspection, setInspection] = useState(null), [screening, setScreening] = useState(null), [error, setError] = useState(''), [panelWidth, setPanelWidth] = useState(380), [resizing, setResizing] = useState(false), [leftCollapsed, setLeftCollapsed] = useState(false), [rightCollapsed, setRightCollapsed] = useState(false), [debrisWatch, setDebrisWatch] = useState([null, null])
   const [showAllActive, setShowAllActive] = useState(false)
+  const [objectInfo, setObjectInfo] = useState({
+  A: null,
+  B: null
+})
   useEffect(() => { fetch(`${API}/api/orbital-data`).then(r => r.ok ? r.json() : Promise.reject()).then(setCatalog).catch(() => setError('Catalog service is offline. Start the backend on port 3000.')) }, [])
   useEffect(() => { if (!selected[0] || !selected[1]) return setScreening(null); const run = () => setScreening(screenPair(selected[0], selected[1])); run(); const id = setInterval(run, 30000); return () => clearInterval(id) }, [selected])
+    useEffect(() => {
+  const loadObjectInfo = async () => {
+
+    const [infoA, infoB] = await Promise.all([
+      fetchSatelliteInfo(selected[0]?.NORAD_CAT_ID),
+      fetchSatelliteInfo(selected[1]?.NORAD_CAT_ID)
+    ])
+
+    setObjectInfo({
+      A: infoA,
+      B: infoB
+    })
+  }
+
+  loadObjectInfo()
+}, [selected])
+
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
   const watchRecords = useMemo(() => catalog.filter(item => item.OBJECT_TYPE === 'DEBRIS').slice(0, 1200).map(item => ({ name: item.OBJECT_NAME, norad: item.NORAD_CAT_ID, rec: satellite.json2satrec(item) })), [catalog])
   const choose = (index, item) => { setSelected(old => old.map((x, i) => i === index ? item : x)); setDebrisWatch(old => old.map((x, i) => i === index ? null : x)); setInspection(null) }
@@ -264,11 +350,11 @@ export default function SpaceView() {
     onClick={() => setShowAllActive(!showAllActive)}
   >
     {showAllActive ? 'HIDE ALL SATELLITES' : `SHOW ALL ${catalog.filter(c => c.OBJECT_TYPE === 'ACTIVE').length.toLocaleString()} SATELLITES`}
-  </button></div><DebrisWatchPanel selected={selected} watches={debrisWatch} />{error ? <p className="service-error">{error}</p> : <div className="catalog-live"><b /> {catalog.length ? `${catalog.length.toLocaleString()} catalogued objects loaded` : 'Connecting to catalog…'}</div>}<div className="method-note"><strong>Screening context</strong><p>Paths use SGP4 propagation. Results are visual indicators, not operational collision-avoidance advice.</p></div></div></aside>
+  </button></div><DebrisWatchPanel selected={selected} watches={debrisWatch} />{error ? <p className="service-error">{error}</p> : <div className="catalog-live"><b /> {catalog.length ? `${catalog.length.toLocaleString()} catalogued objects loaded` : 'Connecting to catalog…'}</div>}</div></aside>
   
   <div className="orbital-stage">
 
-  <OrbitDisplay selected={selected} />
+  
 
   <div className="stage-top">
     <span>EARTH-CENTERED INERTIAL VIEW</span>
@@ -276,19 +362,25 @@ export default function SpaceView() {
   </div>
 
   <Canvas
-    camera={{ position: [7.8, 4.2, 8.4], fov: 42 }}
+    camera={{ position: [7.8, 4.2, 8.4], fov: 36  }}
     dpr={[1, 1.7]}
   >
 
     <color attach="background" args={['#07101d']} />
 
-    <ambientLight intensity={.6} />
+    <ambientLight intensity={2.2} />
 
-    <pointLight
-      position={[9, 6, 7]}
-      intensity={42}
-      color="#a6e5ff"
-    />
+<hemisphereLight
+  skyColor="#8fd8ff"
+  groundColor="#0b4fa3"
+  intensity={1.8}
+/>
+
+<directionalLight
+  position={[8, 6, 8]}
+  intensity={3}
+  color="#ffffff"
+/>
 
     <Stars
       radius={80}
@@ -355,11 +447,7 @@ export default function SpaceView() {
 
   </Canvas>
 
-  <div className="stage-legend">
-    <span><i className="cyan" /> OBJECT A</span>
-    <span><i className="amber" /> OBJECT B</span>
-    <span><i className="orbit-key" /> PROPAGATED PATH</span>
-  </div>
+ <OrbitDisplay selected={selected} />
 
 </div>
 
@@ -450,12 +538,21 @@ export default function SpaceView() {
             Thresholds flag a closer look; they do not estimate collision probability.
           </p>
         </div>
+        
       </>
     ) : (
       <div className="analysis-empty">
         Choose both objects to calculate a 24-hour minimum-separation screening window.
       </div>
     )}
+    <div className="screening-context">
+  <span>SCREENING CONTEXT</span>
+
+  <p>
+    Paths use SGP4 propagation. Results are visual indicators,
+    not operational collision-avoidance advice.
+  </p>
+</div>
 
     <div className="telemetry-heading">
       INFORMATION · CLICK A SATELLITE
