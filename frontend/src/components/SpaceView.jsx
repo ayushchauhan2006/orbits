@@ -749,7 +749,7 @@ export default function SpaceView() {
   <div className="rail-content">
 
     <div className="panel-heading">
-      <span>CONJUNCTION ANALYSIS</span>
+      <span>CLOSE APPROACH ASSESSMENT</span>
       <b>24 HORIZON</b>
     </div>
 
@@ -757,17 +757,17 @@ export default function SpaceView() {
       <>
         <div className="pair-names">
           <span>
-            OBJECT 1
+            OBJECT A
             <b>{selected[0].OBJECT_NAME}</b>
           </span>
 
           <span>
-            OBJECT 2
+            OBJECT B
             <b>{selected[1].OBJECT_NAME}</b>
           </span>
         </div>
 
-        <h4>CURRENT</h4>
+        <h4>CURRENT STATE</h4>
 
         <Metric
           label="Separation"
@@ -797,19 +797,25 @@ export default function SpaceView() {
           value={`${screening.relativeSpeed.toFixed(4)} km/s`}
         />
 
-  <Metric
+ <Metric
   label="Screening Status"
   value={
     screening.distance < 10
       ? 'REVIEW RECOMMENDED'
       : 'MONITOR'
   }
+  hint={
+    screening.distance < 10
+      ? 'Close approach detected — review recommended.'
+      : 'Close approach detected — continue monitoring.'
+  }
 />
 
 <div className="screening-context">
-  <span>SCREENING CONTEXT</span>
+  <span>SCREENING METHODOLOGY</span>
   <p>
-    Thresholds flag a closer look; they do not estimate collision probability.
+      24-hour screening uses SGP4-propagated positions. Thresholds flag close
+  approaches for review; they do not estimate collision probability.
   </p>
 </div>
         
@@ -819,17 +825,10 @@ export default function SpaceView() {
         Choose both objects to calculate a 24-hour minimum-separation screening window.
       </div>
     )}
-    <div className="screening-context">
-  <span>SCREENING CONTEXT</span>
-
-  <p>
-    Paths use SGP4 propagation. Results are visual indicators,
-    not operational collision-avoidance advice.
-  </p>
-</div>
+    
 
     <div className="telemetry-heading">
-      INFORMATION · CLICK A SATELLITE
+       SATELLITE INTELLIGENCE
     </div>
 
     {inspection ? (
@@ -839,7 +838,7 @@ export default function SpaceView() {
       />
     ) : (
       <p className="analysis-empty">
-        Individual data stays hidden until you click a glowing satellite marker.
+       Select a satellite to inspect its current orbital state and positional telemetry.
       </p>
     )}
 

@@ -10,8 +10,9 @@
   color: #86c0d8;
   font: 10px 'DM Mono', monospace;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   padding-left: 2px;
+  text-transform: uppercase;
 }
 /* =========================================
    ANALYSIS FEATURE BOXES
