@@ -41,7 +41,7 @@ function snapshot(data, rec) {
 }
 
 function SatelliteMarker({ data, color, active, watch, debrisRecords, onInspect, onWatchUpdate }) {
-  const marker = useRef(), lastUpdate = useRef(0), lastWatchUpdate = useRef(0), rec = useMemo(() => satellite.json2satrec(data), [data])
+  const marker = useRef(), highlightRef = useRef(), lastUpdate = useRef(0), lastWatchUpdate = useRef(0), rec = useMemo(() => satellite.json2satrec(data), [data])
   useFrame(({ clock }) => {
     const now = new Date(), state = satellite.propagate(rec, now)
     if (state?.position && marker.current) marker.current.position.set(...toScene(state.position))
@@ -57,9 +57,14 @@ function SatelliteMarker({ data, color, active, watch, debrisRecords, onInspect,
       }
       onWatchUpdate({ ...nearest, insideRange: Boolean(nearest && nearest.distanceKm <= DEBRIS_WATCH_RADIUS_KM) })
     }
+    // Every selected marker on screen pulses, regardless of how it was selected.
+    if (highlightRef.current) {
+      const pulseScale = 3.2 + Math.sin(clock.elapsedTime * 2) * 0.3
+      highlightRef.current.scale.setScalar(pulseScale)
+    }
   })
   const watchColor = watch?.insideRange ? '#ff4d63' : '#55dfff'
-  return <group ref={marker}><mesh onClick={e => { e.stopPropagation(); const info = snapshot(data, rec); if (info) onInspect(info) }}><sphereGeometry args={[.115, 18, 18]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.8} /></mesh><mesh scale={1.9}><sphereGeometry args={[.115, 18, 18]} /><meshBasicMaterial color={watchColor} transparent opacity={watch?.insideRange ? .42 : .17} /></mesh></group>
+  return <group ref={marker}><mesh onClick={e => { e.stopPropagation(); const info = snapshot(data, rec); if (info) onInspect(info) }}><sphereGeometry args={[.115, 18, 18]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.8} /></mesh><mesh scale={1.9}><sphereGeometry args={[.115, 18, 18]} /><meshBasicMaterial color={watchColor} transparent opacity={watch?.insideRange ? .42 : .17} /></mesh><mesh ref={highlightRef}><sphereGeometry args={[.115, 18, 18]} /><meshBasicMaterial color={color} transparent opacity={0.25} /></mesh></group>
 }
 
 // NEW: Highly Optimized Instanced Mesh for unlimited debris
@@ -168,10 +173,11 @@ function screenPair(first, second) {
   return { ...best, currentDistance: distance(ca.position, cb.position), currentSpeed: mag({ x: ca.velocity.x - cb.velocity.x, y: ca.velocity.y - cb.velocity.y, z: ca.velocity.z - cb.velocity.z }), hours: (best.time - now) / 3600000 }
 }
 
-function Search({ catalog, label, selected, color, onSelect }) {
+function Search({ catalog, label, selected, color, onSelect, onRemove }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
-  return <div className="object-picker"><label>{label}</label><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Name or NORAD ID" />{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm(x.OBJECT_NAME) }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
+  const removeSelection = () => { onRemove(); setTerm('') }
+  return <div className="object-picker"><label>{label}</label><div className="search-input-wrap"><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Name or NORAD ID" />{selected && <button className="remove-selection" type="button" onClick={removeSelection} title={`Remove ${selected.OBJECT_NAME}`} aria-label={`Remove ${selected.OBJECT_NAME}`}>×</button>}</div>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm(x.OBJECT_NAME) }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
 const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
@@ -186,12 +192,22 @@ export default function SpaceView() {
   useEffect(() => { if (!selected[0] || !selected[1]) return setScreening(null); const run = () => setScreening(screenPair(selected[0], selected[1])); run(); const id = setInterval(run, 30000); return () => clearInterval(id) }, [selected])
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
   const watchRecords = useMemo(() => catalog.filter(item => item.OBJECT_TYPE === 'DEBRIS').slice(0, 1200).map(item => ({ name: item.OBJECT_NAME, norad: item.NORAD_CAT_ID, rec: satellite.json2satrec(item) })), [catalog])
-  const choose = (index, item) => { setSelected(old => old.map((x, i) => i === index ? item : x)); setDebrisWatch(old => old.map((x, i) => i === index ? null : x)); setInspection(null) }
+  const choose = (index, item) => {
+    setSelected(old => old.map((x, i) => i === index ? item : x));
+    setDebrisWatch(old => old.map((x, i) => i === index ? null : x));
+    try {
+      const info = snapshot(item, satellite.json2satrec(item))
+      setInspection(info ? { ...info, color: colors[index] } : null)
+    } catch {
+      setInspection(null)
+    }
+  }
+  const remove = index => { setSelected(old => old.map((x, i) => i === index ? null : x)); setDebrisWatch(old => old.map((x, i) => i === index ? null : x)); setScreening(null); setInspection(null) }
   const inspect = (value, color) => setInspection({ ...value, color })
   const handleSwarmClick = (satelliteData) => {
     // 1. Set the raw clicked satellite as Object A in the left panel
     setSelected(prev => [satelliteData, prev[1]]);
-    
+
     // 2. Safely generate the exact telemetry format the InspectionCard expects
     try {
       const rec = satellite.json2satrec(satelliteData);
@@ -204,7 +220,7 @@ export default function SpaceView() {
     }
   };
   return <section className="mission-view" style={{ gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px` }}>
-    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p><div className="picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />{/* NEW TOGGLE BUTTON */}
+    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p><div className="picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} onRemove={() => remove(0)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} onRemove={() => remove(1)} />{/* NEW TOGGLE BUTTON */}
   <button 
     className="primary-button" 
     style={{ marginTop: '12px', width: '100%' }} 
@@ -236,6 +252,6 @@ export default function SpaceView() {
 
   <OrbitControls enablePan={false} minDistance={4.8} maxDistance={20} />
 </Canvas><div className="stage-legend"><span><i className="cyan" /> OBJECT A</span><span><i className="amber" /> OBJECT B</span><span><i className="orbit-key" /> PROPAGATED PATH</span></div></div>
-    <aside className={`analysis-rail ${rightCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle right" onClick={() => setRightCollapsed(x => !x)} title="Collapse or expand analysis">{rightCollapsed ? '‹' : '›'}</button>{!rightCollapsed && <button className="resize-handle" title="Drag to resize analysis panel" onPointerDown={e => { e.preventDefault(); setResizing(true) }}><span /></button>}<div className="rail-content"><div className="panel-heading"><span>CONJUNCTION ANALYSIS</span><b>24 HORIZON</b></div>{screening ? <><div className="pair-names"><span>OBJECT 1 <b>{selected[0].OBJECT_NAME}</b></span><span>OBJECT 2 <b>{selected[1].OBJECT_NAME}</b></span></div><h4>CURRENT</h4><Metric label="Separation" value={`${screening.currentDistance.toFixed(2)} km`} /><Metric label="Relative velocity" value={`${screening.currentSpeed.toFixed(4)} km/s`} /><h4>CLOSEST APPROACH</h4><Metric label="Miss distance" value={`${screening.distance.toFixed(2)} km`} /><Metric label="Time to TCA" value={`${screening.hours.toFixed(1)} h`} hint={screening.time.toLocaleTimeString()} /><Metric label="Relative velocity @ TCA" value={`${screening.relativeSpeed.toFixed(4)} km/s`} /><div className="screening-state"><span>SCREENING STATUS</span><strong className={screening.distance < 10 ? 'attention' : ''}>{screening.distance < 10 ? 'REVIEW RECOMMENDED' : 'MONITOR'}</strong><p>Thresholds flag a closer look; they do not estimate collision probability.</p></div></> : <div className="analysis-empty">Choose both objects to calculate a 24-hour minimum-separation screening window.</div>}<div className="telemetry-heading">INFORMATION · CLICK A SATELLITE</div>{inspection ? <InspectionCard item={inspection} color={inspection.color} /> : <p className="analysis-empty">Individual data stays hidden until you click a glowing satellite marker.</p>}</div></aside>
+    <aside className={`analysis-rail ${rightCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle right" onClick={() => setRightCollapsed(x => !x)} title="Collapse or expand analysis">{rightCollapsed ? '‹' : '›'}</button>{!rightCollapsed && <button className="resize-handle" title="Drag to resize analysis panel" onPointerDown={e => { e.preventDefault(); setResizing(true) }}><span /></button>}<div className="rail-content"><div className="panel-heading"><span>CONJUNCTION ANALYSIS</span><b>24 HORIZON</b></div>{screening && selected[0] && selected[1] ? <><div className="pair-names"><span>OBJECT 1 <b>{selected[0].OBJECT_NAME}</b></span><span>OBJECT 2 <b>{selected[1].OBJECT_NAME}</b></span></div><h4>CURRENT</h4><Metric label="Separation" value={`${screening.currentDistance.toFixed(2)} km`} /><Metric label="Relative velocity" value={`${screening.currentSpeed.toFixed(4)} km/s`} /><h4>CLOSEST APPROACH</h4><Metric label="Miss distance" value={`${screening.distance.toFixed(2)} km`} /><Metric label="Time to TCA" value={`${screening.hours.toFixed(1)} h`} hint={screening.time.toLocaleTimeString()} /><Metric label="Relative velocity @ TCA" value={`${screening.relativeSpeed.toFixed(4)} km/s`} /><div className="screening-state"><span>SCREENING STATUS</span><strong className={screening.distance < 10 ? 'attention' : ''}>{screening.distance < 10 ? 'REVIEW RECOMMENDED' : 'MONITOR'}</strong><p>Thresholds flag a closer look; they do not estimate collision probability.</p></div></> : <div className="analysis-empty">Choose both objects to calculate a 24-hour minimum-separation screening window.</div>}<div className="telemetry-heading">INFORMATION · CLICK A SATELLITE</div>{inspection ? <InspectionCard item={inspection} color={inspection.color} /> : <p className="analysis-empty">Individual data stays hidden until you click a glowing satellite marker.</p>}</div></aside>
   </section>
 }
