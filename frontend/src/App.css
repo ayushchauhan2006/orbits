@@ -16,9 +16,7 @@ body,
   padding: 0;
 }
 
-body {
-  overflow: hidden;
-}
+/* Overflow hidden only for intro screen - handled by .intro-screen class */
 
 
 /* ========================================
