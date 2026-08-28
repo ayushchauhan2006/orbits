@@ -1,0 +1,272 @@
+.analysis-rail { position: relative; min-width: 380px; }
+.resize-handle { position: absolute; z-index: 5; left: -7px; top: 0; bottom: 0; width: 14px; padding: 0; border: 0; background: transparent; cursor: col-resize; }
+.resize-handle span { display: block; width: 2px; height: 100%; margin: auto; background: transparent; transition: background .18s; }
+.resize-handle:hover span, .resize-handle:focus span { background: #51d9ff; box-shadow: 0 0 12px #51d9ff; }
+.pair-names { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid #ffffff12; font: 10px 'DM Mono'; color: #7896ae; }
+.pair-names span { display: grid; grid-template-columns: 78px 1fr; gap: 10px; }
+.pair-names b { color: #edf7fb; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analysis-rail h4 { margin: 18px 0 2px; color: #86a9c0; font: 10px 'DM Mono'; letter-spacing: 1.5px; }
+.analysis-rail .metric { display: grid; grid-template-columns: 1fr auto; column-gap: 16px; padding: 12px 0; }
+.analysis-rail .metric strong { font-size: 21px; text-align: right; }
+.analysis-rail .metric small { grid-column: 2; text-align: right; }
+.telemetry-card p { display: flex; justify-content: space-between; }
+.telemetry-card p b { color: #edf7fb; font-weight: 500; }
+.telemetry-card em { display: block; border-top: 1px solid #ffffff12; padding-top: 9px; margin-top: 11px; color: #55e6b2; font: 9px 'DM Mono'; font-style: normal; }
+.mission-rail, .analysis-rail { transition: padding .2s ease, background .2s ease; }
+.mission-rail.collapsed, .analysis-rail.collapsed { min-width: 0; padding: 0; overflow: visible; }
+.mission-rail.collapsed .rail-content, .analysis-rail.collapsed .rail-content { display: none; }
+.collapse-toggle { position: absolute; z-index: 12; top: 18px; width: 28px; height: 31px; border: 1px solid #4e8aa4; border-radius: 4px; background: #10273a; color: #d5f4ff; font-size: 20px; line-height: 1; }
+.collapse-toggle.left { right: 9px; }.collapse-toggle.right { left: 9px; }
+.analysis-rail .metric strong { font-size: 24px; }
+.telemetry-card { margin-top: 12px; padding: 17px 14px; border: 1px solid #2a617e; border-radius: 7px; background: #102131; }
+.telemetry-card > div { font-size: 15px; }.telemetry-card p { font-size: 11px; }.telemetry-card section { gap: 9px; font-size: 11px; }.telemetry-card section span { display: flex; justify-content: space-between; gap: 14px; }.telemetry-card section b { font-size: 12px; }
+.debris-watch-panel { margin-top:23px; padding:15px; border:1px solid #2a647f; border-radius:6px; background:#0d2332; }.debris-watch-panel h3 { margin:0 0 12px; color:#82c8df; font:11px 'DM Mono'; letter-spacing:1px; }.debris-watch-panel p { margin:0; color:#9bb8c8; font-size:12px; line-height:1.5; }
+.watch-result { display:grid; grid-template-columns:1fr auto; gap:7px 12px; padding:11px 0; border-top:1px solid #ffffff16; color:#cfe6ee; font-size:12px; }.watch-result:first-of-type { border-top:0; }.watch-result div { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.watch-result i { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; }.watch-result>b { color:#61e4d0; font:11px 'DM Mono'; }.watch-result span { grid-column:1 / -1; color:#8caebe; font-size:11px; }.watch-result.alert>b { color:#ff7880; }.watch-result.alert span { color:#ffb5b9; }
+@media (max-width: 1120px) { .resize-handle { display: none; } }
+
+/* =========================================
+   DISPLAY ONLY: ORBIT A / ORBIT B
+   ========================================= */
+
+.orbit-display {
+  position: absolute;
+
+  left: 24px;
+  bottom: 70px;
+
+  width: 230px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  z-index: 30;
+
+  pointer-events: none;
+}
+
+/* BOX */
+
+.orbit-display-box {
+  padding: 13px 15px;
+
+  background: rgba(7, 16, 29, 0.92);
+
+  backdrop-filter: blur(10px);
+
+  border-radius: 6px;
+}
+
+
+/* ORBIT A */
+
+.orbit-display-a {
+  border: 1px solid #48d7ff;
+
+  box-shadow:
+    0 0 18px rgba(72, 215, 255, 0.12);
+}
+
+
+/* ORBIT B */
+
+.orbit-display-b {
+  border: 1px solid #ffb454;
+
+  box-shadow:
+    0 0 18px rgba(255, 180, 84, 0.12);
+}
+
+
+/* TITLE */
+
+.orbit-display-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin-bottom: 9px;
+
+  color: #edf7fb;
+
+  font: 11px 'DM Mono';
+
+  font-weight: 700;
+
+  letter-spacing: 1.5px;
+}
+
+
+/* DOT */
+
+.orbit-display-dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+}
+
+.orbit-display-a .orbit-display-dot {
+  background: #48d7ff;
+
+  box-shadow: 0 0 9px #48d7ff;
+}
+
+.orbit-display-b .orbit-display-dot {
+  background: #ffb454;
+
+  box-shadow: 0 0 9px #ffb454;
+}
+
+
+/* SATELLITE NAME */
+
+.orbit-display-name {
+  color: #dcecf5;
+
+  font: 12px 'DM Mono';
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+
+/* NORAD */
+
+.orbit-display-norad {
+  margin-top: 5px;
+
+  color: #7895a8;
+
+  font: 9px 'DM Mono';
+
+  letter-spacing: .8px;
+}
+/* =========================================
+   SCREENING CONTEXT - RIGHT PANEL
+   ========================================= */
+
+.screening-context {
+  margin-top: 16px;
+  padding: 14px 15px;
+
+  border: 1px solid #1b4258;
+  background: rgba(10, 25, 40, 0.75);
+
+  border-radius: 2px;
+}
+
+.screening-context > span {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #8bc7df;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+}
+
+.screening-context p {
+  margin: 0;
+
+  color: #7895a8;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  line-height: 1.6;
+}
+/* =========================================
+   SELECTED OBJECT DESCRIPTIONS
+   ========================================= */
+
+.selected-object-info {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #183247;
+}
+
+.selected-object-info h3 {
+  margin: 0 0 12px;
+
+  color: #8bc7df;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+}
+
+.object-description-card {
+  margin-bottom: 10px;
+  padding: 12px;
+
+  background: rgba(8, 20, 32, 0.8);
+
+  border: 1px solid #1b4258;
+  border-radius: 3px;
+}
+
+.object-description-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 8px;
+
+  color: #9bb9c9;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+
+  letter-spacing: 1.2px;
+}
+
+.object-description-header i {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+}
+
+.object-description-card > strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #e2f2f8;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+
+.object-description-card > small {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #607f91;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.object-description-card > p {
+  margin: 0;
+
+  color: #829eae;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  line-height: 1.55;
+}
