@@ -410,9 +410,17 @@ const signed = n => `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)} km`
 function InspectionCard({ item, color }) { return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div> }
 function DebrisWatchPanel({ selected, watches }) { return <section className="debris-watch-panel"><h3>DEBRIS WATCH · 50 KM RANGE</h3>{selected.some(Boolean) ? selected.map((item, index) => { const watch = watches[index]; return item && <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}><div><i style={{ background: colors[index] }} /><strong>{item.OBJECT_NAME}</strong></div><b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>{watch?.distanceKm && <span>{watch.insideRange ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away` : `Nearest debris: ${watch.distanceKm.toFixed(1)} km away`}</span>}</div> }) : <p>Select a satellite to start the live debris watch.</p>}</section> }
 
-function OrbitDisplay({ selected , leftCollapsed}) {
+function OrbitDisplay({ selected, leftCollapsed, showAllActive, setShowAllActive, satelliteCount }) {
   return (
     <div className={`orbit-display ${leftCollapsed ? 'orbit-display-left-collapsed' : ''}`}>
+      <button
+  className="primary-button orbit-display-toggle"
+  onClick={() => setShowAllActive(!showAllActive)}
+>
+  {showAllActive
+    ? 'HIDE ALL SATELLITES'
+    : `SHOW ALL ${satelliteCount.toLocaleString()} SATELLITES`}
+</button>
       <div className="orbit-display-box orbit-display-a">
 
         <div className="orbit-display-title">
@@ -596,7 +604,13 @@ export default function SpaceView() {
     style={{
       gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px`
     }}>
-    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p>
+    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><h1>
+  Monitor the<br />
+  Space Around<br />
+  Earth.
+</h1><p className="mission-copy">
+  Track orbital paths, monitor nearby debris, and screen potential conjunctions.
+</p>
     <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />
       {/* NEW TOGGLE BUTTON */}
   <button 
@@ -699,7 +713,13 @@ export default function SpaceView() {
 
   </Canvas>
 
-<OrbitDisplay selected={selected} leftCollapsed={leftCollapsed} />
+<OrbitDisplay
+  selected={selected}
+  leftCollapsed={leftCollapsed}
+  showAllActive={showAllActive}
+  setShowAllActive={setShowAllActive}
+  satelliteCount={catalog.filter(c => c.OBJECT_TYPE === 'ACTIVE').length}
+/>
 
 </div>
 

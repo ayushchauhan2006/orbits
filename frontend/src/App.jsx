@@ -704,10 +704,6 @@ other available catalogue information.
               ))}
             </nav>
 
-            <div className="system-live">
-              <b /> SYSTEM NOMINAL
-            </div>
-
           </header>
 
           {/* CONTENT BELOW DASHBOARD */}
