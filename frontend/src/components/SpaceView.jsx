@@ -383,9 +383,9 @@ function Search({ catalog, label, selected, color, onSelect, onRemove }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
   const removeSelection = () => {
-    onRemove()
-    setTerm('')
-  }
+  onSelect(null)
+  setTerm('')
+}
   return <div className="object-picker"><label>{label}</label><div className="search-input-wrap"><input
   value={selected ? selected.OBJECT_NAME : term}
   onChange={e => {
