@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import * as satellite from 'satellite.js'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { Line, OrbitControls, Stars } from '@react-three/drei'
+import { Line, OrbitControls, Stars, useGLTF } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 import earthModel from '../assets/earth.glb'
