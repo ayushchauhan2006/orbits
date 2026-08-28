@@ -123,6 +123,9 @@
 
   pointer-events: none;
 }
+.orbit-display-left-collapsed {
+  left: 72px;
+}
 
 /* BOX */
 

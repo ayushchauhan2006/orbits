@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import * as satellite from 'satellite.js'
-import { Canvas, useFrame, useLoader } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { Line, OrbitControls, Stars, useGLTF } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 import earthModel from '../assets/earth.glb'
 import earthTexture from '../assets/earth-texture.png'
+const earthTextureLoader = new THREE.TextureLoader()
+const earthTexturePreloaded = earthTextureLoader.load(earthTexture)
+
+earthTexturePreloaded.colorSpace = THREE.SRGBColorSpace
+earthTexturePreloaded.wrapS = THREE.ClampToEdgeWrapping
+earthTexturePreloaded.wrapT = THREE.ClampToEdgeWrapping
+earthTexturePreloaded.anisotropy = 8
 import './SpaceView.css'
 import './MissionPolish.css'
 
@@ -43,21 +50,6 @@ const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
 function Earth() {
   const earthRef = useRef()
 
-  const texture = useLoader(
-    THREE.TextureLoader,
-    earthTexture
-  )
-
-  useEffect(() => {
-    if (!texture) return
-
-    texture.colorSpace = THREE.SRGBColorSpace
-    texture.wrapS = THREE.ClampToEdgeWrapping
-    texture.wrapT = THREE.ClampToEdgeWrapping
-    texture.anisotropy = 8
-    texture.needsUpdate = true
-  }, [texture])
-
   useFrame((_, delta) => {
     if (earthRef.current) {
       earthRef.current.rotation.y += delta * 0.02
@@ -69,7 +61,7 @@ function Earth() {
       <sphereGeometry args={[3.2, 96, 96]} />
 
       <meshStandardMaterial
-        map={texture}
+        map={earthTexturePreloaded}
         color="#ffffff"
         roughness={0.85}
         metalness={0}
@@ -77,7 +69,6 @@ function Earth() {
     </mesh>
   )
 }
-
 
 
 useGLTF.preload(earthModel)
@@ -408,10 +399,9 @@ const signed = n => `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)} km`
 function InspectionCard({ item, color }) { return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div> }
 function DebrisWatchPanel({ selected, watches }) { return <section className="debris-watch-panel"><h3>DEBRIS WATCH · 50 KM RANGE</h3>{selected.some(Boolean) ? selected.map((item, index) => { const watch = watches[index]; return item && <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}><div><i style={{ background: colors[index] }} /><strong>{item.OBJECT_NAME}</strong></div><b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>{watch?.distanceKm && <span>{watch.insideRange ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away` : `Nearest debris: ${watch.distanceKm.toFixed(1)} km away`}</span>}</div> }) : <p>Select a satellite to start the live debris watch.</p>}</section> }
 
-function OrbitDisplay({ selected }) {
+function OrbitDisplay({ selected , leftCollapsed}) {
   return (
-    <div className="orbit-display">
-
+    <div className={`orbit-display ${leftCollapsed ? 'orbit-display-left-collapsed' : ''}`}>
       <div className="orbit-display-box orbit-display-a">
 
         <div className="orbit-display-title">
@@ -460,7 +450,16 @@ function OrbitDisplay({ selected }) {
 }
 
 export default function SpaceView() {
-  const [catalog, setCatalog] = useState([]), [selected, setSelected] = useState([null, null]), [inspection, setInspection] = useState(null), [screening, setScreening] = useState(null), [error, setError] = useState(''), [panelWidth, setPanelWidth] = useState(380), [resizing, setResizing] = useState(false), [leftCollapsed, setLeftCollapsed] = useState(false), [rightCollapsed, setRightCollapsed] = useState(false), [debrisWatch, setDebrisWatch] = useState([null, null])
+  const [catalog, setCatalog] = useState([]),
+  [selected, setSelected] = useState([null, null]),
+  [inspection, setInspection] = useState(null),
+  [screening, setScreening] = useState(null),
+  [error, setError] = useState(''),
+  [panelWidth, setPanelWidth] = useState(380),
+  [resizing, setResizing] = useState(false),
+  [leftCollapsed, setLeftCollapsed] = useState(true),
+  [rightCollapsed, setRightCollapsed] = useState(true),
+  [debrisWatch, setDebrisWatch] = useState([null, null])
   const [showAllActive, setShowAllActive] = useState(false)
   const [objectInfo, setObjectInfo] = useState({
   A: null,
@@ -689,7 +688,7 @@ export default function SpaceView() {
 
   </Canvas>
 
- <OrbitDisplay selected={selected} />
+<OrbitDisplay selected={selected} leftCollapsed={leftCollapsed} />
 
 </div>
 
