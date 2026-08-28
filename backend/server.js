@@ -453,6 +453,136 @@ if (seenPairs.has(pairKey)) continue;
   }
 });
 
+// ------------------------------------
+// DEBRIS WATCH WITH PREDICTION
+// ------------------------------------
+app.use(express.json()); // Enable JSON body parsing
+
+app.post('/api/debris-watch', (req, res) => {
+  try {
+    const { satelliteNoradIds } = req.body;
+
+    if (!Array.isArray(satelliteNoradIds) || satelliteNoradIds.length === 0) {
+      return res.status(400).json({ error: 'satelliteNoradIds array required' });
+    }
+
+    const now = new Date();
+    const WATCH_RADIUS_KM = 50;
+    const PREDICTION_HOURS = 2;
+    const results = [];
+
+    // Helper function for 3D distance
+    const distance3D = (a, b) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dz = b.z - a.z;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    };
+
+    for (const noradId of satelliteNoradIds) {
+      // Find the satellite record
+      const satRecord = satelliteRecords.find(r => r.object.NORAD_CAT_ID === noradId);
+
+      if (!satRecord) {
+        results.push({
+          satelliteNorad: noradId,
+          error: 'Satellite not found',
+          nearestDebris: null,
+          closestApproach: null,
+          insideRange: false,
+          predictedThreat: false
+        });
+        continue;
+      }
+
+      // Propagate satellite at current time
+      const satState = satellite.propagate(satRecord.satrec, now);
+
+      if (!satState?.position) {
+        results.push({
+          satelliteNorad: noradId,
+          error: 'Failed to propagate satellite',
+          nearestDebris: null,
+          closestApproach: null,
+          insideRange: false,
+          predictedThreat: false
+        });
+        continue;
+      }
+
+      let nearestNow = null;
+      let closestApproach = null;
+
+      // Check all debris
+      for (const item of satelliteRecords) {
+        if (item.object.OBJECT_TYPE !== 'DEBRIS') continue;
+
+        try {
+          // Current separation
+          const debrisState = satellite.propagate(item.satrec, now);
+          if (!debrisState?.position) continue;
+
+          const currentDist = distance3D(satState.position, debrisState.position);
+
+          // Track nearest debris RIGHT NOW
+          if (!nearestNow || currentDist < nearestNow.distance) {
+            nearestNow = {
+              name: item.object.OBJECT_NAME,
+              norad: item.object.NORAD_CAT_ID,
+              distance: currentDist,
+              when: 'now'
+            };
+          }
+
+          // PREDICTIVE: Sample the next 2 hours in 5-minute intervals
+          // Only predict for debris that's somewhat close (within 200km)
+          if (currentDist < 200) {
+            for (let minutes = 0; minutes <= PREDICTION_HOURS * 60; minutes += 5) {
+              const futureTime = new Date(now.getTime() + minutes * 60000);
+              const futureSat = satellite.propagate(satRecord.satrec, futureTime);
+              const futureDeb = satellite.propagate(item.satrec, futureTime);
+
+              if (!futureSat?.position || !futureDeb?.position) continue;
+
+              const futureDist = distance3D(futureSat.position, futureDeb.position);
+
+              if (!closestApproach || futureDist < closestApproach.distance) {
+                closestApproach = {
+                  name: item.object.OBJECT_NAME,
+                  norad: item.object.NORAD_CAT_ID,
+                  distance: futureDist,
+                  when: minutes === 0 ? 'now' : `${minutes} min`,
+                  timestamp: futureTime.toISOString()
+                };
+              }
+            }
+          }
+        } catch (error) {
+          // Skip individual bad debris objects
+        }
+      }
+
+      results.push({
+        satelliteNorad: noradId,
+        nearestDebris: nearestNow,
+        closestApproach: closestApproach,
+        insideRange: nearestNow && nearestNow.distance <= WATCH_RADIUS_KM,
+        predictedThreat: closestApproach && closestApproach.distance <= WATCH_RADIUS_KM
+      });
+    }
+
+    res.json({
+      results,
+      timestamp: now.toISOString(),
+      debrisChecked: satelliteRecords.filter(r => r.object.OBJECT_TYPE === 'DEBRIS').length
+    });
+
+  } catch (error) {
+    console.error('Debris watch error:', error);
+    res.status(500).json({ error: 'Failed to process debris watch', message: error.message });
+  }
+});
+
 app.listen(PORT, () => {
 
   console.log(

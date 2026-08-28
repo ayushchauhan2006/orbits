@@ -40,23 +40,13 @@ function snapshot(data, rec) {
   return { name: data.OBJECT_NAME, norad: data.NORAD_CAT_ID, altitude: gd.height, speed: mag(state.velocity), latitude: satellite.radiansToDegrees(gd.latitude), longitude: satellite.radiansToDegrees(gd.longitude), eci: state.position, updatedAt: now }
 }
 
-function SatelliteMarker({ data, color, active, watch, debrisRecords, onInspect, onWatchUpdate }) {
-  const marker = useRef(), highlightRef = useRef(), lastUpdate = useRef(0), lastWatchUpdate = useRef(0), rec = useMemo(() => satellite.json2satrec(data), [data])
+function SatelliteMarker({ data, color, active, watch, onInspect }) {
+  const marker = useRef(), highlightRef = useRef(), lastUpdate = useRef(0), rec = useMemo(() => satellite.json2satrec(data), [data])
   useFrame(({ clock }) => {
     const now = new Date(), state = satellite.propagate(rec, now)
     if (state?.position && marker.current) marker.current.position.set(...toScene(state.position))
     if (active && clock.elapsedTime - lastUpdate.current > 1) { lastUpdate.current = clock.elapsedTime; const info = snapshot(data, rec); if (info) onInspect(info) }
-    if (state?.position && clock.elapsedTime - lastWatchUpdate.current > 1.5) {
-      lastWatchUpdate.current = clock.elapsedTime
-      let nearest = null
-      for (const debris of debrisRecords) {
-        const debrisState = satellite.propagate(debris.rec, now)
-        if (!debrisState?.position) continue
-        const separation = distance(state.position, debrisState.position)
-        if (!nearest || separation < nearest.distanceKm) nearest = { name: debris.name, norad: debris.norad, distanceKm: separation }
-      }
-      onWatchUpdate({ ...nearest, insideRange: Boolean(nearest && nearest.distanceKm <= DEBRIS_WATCH_RADIUS_KM) })
-    }
+    // Debris watch moved to backend API - no more heavy client-side loop
     // Every selected marker on screen pulses, regardless of how it was selected.
     if (highlightRef.current) {
       const pulseScale = 3.2 + Math.sin(clock.elapsedTime * 2) * 0.3
@@ -183,7 +173,43 @@ function Search({ catalog, label, selected, color, onSelect, onRemove }) {
 const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
 const signed = n => `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)} km`
 function InspectionCard({ item, color }) { return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div> }
-function DebrisWatchPanel({ selected, watches }) { return <section className="debris-watch-panel"><h3>DEBRIS WATCH · 50 KM RANGE</h3>{selected.some(Boolean) ? selected.map((item, index) => { const watch = watches[index]; return item && <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}><div><i style={{ background: colors[index] }} /><strong>{item.OBJECT_NAME}</strong></div><b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>{watch?.distanceKm && <span>{watch.insideRange ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away` : `Nearest debris: ${watch.distanceKm.toFixed(1)} km away`}</span>}</div> }) : <p>Select a satellite to start the live debris watch.</p>}</section> }
+function DebrisWatchPanel({ selected, watches }) {
+  return (
+    <section className="debris-watch-panel">
+      <h3>DEBRIS WATCH · 50 KM RANGE</h3>
+      {selected.some(Boolean) ? selected.map((item, index) => {
+        const watch = watches[index];
+        return item && (
+          <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}>
+            <div>
+              <i style={{ background: colors[index] }} />
+              <strong>{item.OBJECT_NAME}</strong>
+            </div>
+
+            {/* Current status */}
+            <b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>
+
+            {watch?.distanceKm && (
+              <span>
+                {watch.insideRange
+                  ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away`
+                  : `Nearest: ${watch.distanceKm.toFixed(1)} km away`
+                }
+              </span>
+            )}
+
+            {/* NEW: Predictive warning */}
+            {watch?.prediction && watch.prediction.threat && watch.prediction.when !== 'now' && (
+              <div className="prediction-warning">
+                ⚠️ Predicted approach: <strong>{watch.prediction.name}</strong> at {watch.prediction.distance.toFixed(1)} km in {watch.prediction.when}
+              </div>
+            )}
+          </div>
+        );
+      }) : <p>Select a satellite to start the live debris watch.</p>}
+    </section>
+  );
+}
 
 export default function SpaceView() {
   const [catalog, setCatalog] = useState([]), [selected, setSelected] = useState([null, null]), [inspection, setInspection] = useState(null), [screening, setScreening] = useState(null), [error, setError] = useState(''), [panelWidth, setPanelWidth] = useState(380), [resizing, setResizing] = useState(false), [leftCollapsed, setLeftCollapsed] = useState(false), [rightCollapsed, setRightCollapsed] = useState(false), [debrisWatch, setDebrisWatch] = useState([null, null])
@@ -191,7 +217,62 @@ export default function SpaceView() {
   useEffect(() => { fetch(`${API}/api/orbital-data`).then(r => r.ok ? r.json() : Promise.reject()).then(setCatalog).catch(() => setError('Catalog service is offline. Start the backend on port 3000.')) }, [])
   useEffect(() => { if (!selected[0] || !selected[1]) return setScreening(null); const run = () => setScreening(screenPair(selected[0], selected[1])); run(); const id = setInterval(run, 30000); return () => clearInterval(id) }, [selected])
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
-  const watchRecords = useMemo(() => catalog.filter(item => item.OBJECT_TYPE === 'DEBRIS').slice(0, 1200).map(item => ({ name: item.OBJECT_NAME, norad: item.NORAD_CAT_ID, rec: satellite.json2satrec(item) })), [catalog])
+
+  // NEW: Backend-powered debris watch with prediction
+  useEffect(() => {
+    if (!selected.some(Boolean)) return;
+
+    const checkDebris = async () => {
+      const watchedSatellites = selected
+        .filter(Boolean)
+        .map(s => s.NORAD_CAT_ID);
+
+      if (watchedSatellites.length === 0) return;
+
+      try {
+        const response = await fetch(`${API}/api/debris-watch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ satelliteNoradIds: watchedSatellites })
+        });
+
+        if (!response.ok) throw new Error('Debris watch API failed');
+
+        const data = await response.json();
+
+        // Map results back to the correct indices
+        const newWatches = selected.map(sat => {
+          if (!sat) return null;
+          const result = data.results.find(r => r.satelliteNorad === sat.NORAD_CAT_ID);
+          if (!result || !result.nearestDebris) return null;
+
+          return {
+            name: result.nearestDebris.name,
+            norad: result.nearestDebris.norad,
+            distanceKm: result.nearestDebris.distance,
+            insideRange: result.insideRange,
+            // NEW: Predictive data
+            prediction: result.closestApproach ? {
+              distance: result.closestApproach.distance,
+              when: result.closestApproach.when,
+              threat: result.predictedThreat,
+              name: result.closestApproach.name
+            } : null
+          };
+        });
+
+        setDebrisWatch(newWatches);
+      } catch (error) {
+        console.error('Debris watch failed:', error);
+      }
+    };
+
+    // Check immediately, then every 3 seconds
+    checkDebris();
+    const interval = setInterval(checkDebris, 3000);
+
+    return () => clearInterval(interval);
+  }, [selected])
   const choose = (index, item) => {
     setSelected(old => old.map((x, i) => i === index ? item : x));
     setDebrisWatch(old => old.map((x, i) => i === index ? null : x));
@@ -237,11 +318,11 @@ export default function SpaceView() {
   <Earth />
   <DebrisSwarm catalog={catalog} />
   <ActiveSwarm catalog={catalog} visible={showAllActive} onSatClick={handleSwarmClick}/>
-  
+
   {selected.map((item, i) => item && (
     <group key={item.NORAD_CAT_ID}>
       <Orbit data={item} color={colors[i]} active={inspection?.norad === item.NORAD_CAT_ID} watch={debrisWatch[i]} />
-      <SatelliteMarker data={item} color={colors[i]} active={inspection?.norad === item.NORAD_CAT_ID} watch={debrisWatch[i]} debrisRecords={watchRecords} onInspect={x => inspect(x, colors[i])} onWatchUpdate={watch => setDebrisWatch(old => old.map((x, index) => index === i ? watch : x))} />
+      <SatelliteMarker data={item} color={colors[i]} active={inspection?.norad === item.NORAD_CAT_ID} watch={debrisWatch[i]} onInspect={x => inspect(x, colors[i])} />
     </group>
   ))}
 
