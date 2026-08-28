@@ -741,21 +741,7 @@ other available catalogue information.
 
           </main>
 
-          <footer>
-            <span>
-              ORBITAL INTELLIGENCE / SIH 2026
-            </span>
-
-            <span>
-              SGP4 PROPAGATION ·
-              CATALOGUE-BASED SCREENING
-            </span>
-
-            <span>
-              NOT FOR OPERATIONAL
-              COLLISION AVOIDANCE
-            </span>
-          </footer>
+  
 
         </div>
       )}

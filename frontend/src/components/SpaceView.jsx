@@ -597,10 +597,7 @@ export default function SpaceView() {
 
   
 
-  <div className="stage-top">
-    <span>EARTH-CENTERED INERTIAL VIEW</span>
-    <span>DRAG TO ORBIT · SCROLL TO ZOOM</span>
-  </div>
+  
 
   <Canvas
     camera={{ position: [7.8, 4.2, 8.4], fov: 36  }}
