@@ -128,7 +128,7 @@ function Heatmap() {
 
         <div className="heatmap-title">
           <span>ORBITAL DENSITY HEATMAP</span>
-          <h1>Near-Earth population density</h1>
+          <h1>SPACE OBJECT DENSITY ANALYSIS</h1>
           <p>
             Propagated catalogue distribution across latitude and longitude.
           </p>
