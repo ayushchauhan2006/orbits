@@ -379,10 +379,14 @@ function screenPair(first, second) {
   }
 }
 
-function Search({ catalog, label, selected, color, onSelect }) {
+function Search({ catalog, label, selected, color, onSelect, onRemove }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
-  return <div className="object-picker"><label>{label}</label><input
+  const removeSelection = () => {
+    onRemove()
+    setTerm('')
+  }
+  return <div className="object-picker"><label>{label}</label><div className="search-input-wrap"><input
   value={selected ? selected.OBJECT_NAME : term}
   onChange={e => {
     if (selected) {
@@ -391,7 +395,7 @@ function Search({ catalog, label, selected, color, onSelect }) {
     setTerm(e.target.value)
   }}
   placeholder="Name or NORAD ID"
-/>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => {  onSelect(x); setTerm('')}}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
+ />{selected && <button className="remove-selection" type="button" onClick={removeSelection} title={`Remove ${selected.OBJECT_NAME}`} aria-label={`Remove ${selected.OBJECT_NAME}`}>×</button>}</div>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm('') }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
 const Metric = ({ label, value, hint }) => (
@@ -554,6 +558,10 @@ export default function SpaceView() {
     .filter(Boolean)
 
 }, [catalog])
+  const inspect = (item, color) => {
+    setInspection({ ...item, color })
+  }
+
   const choose = (index, item) => {
 
   // Clear old analysis immediately
@@ -591,13 +599,9 @@ export default function SpaceView() {
       setInspection(null);
     }
   };
-  return <section
-    className="mission-view"
-    style={{
-      gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px`
-    }}>
+  return <section className="mission-view" style={{ gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px` }}>
     <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p>
-    <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />
+    <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} onRemove={() => choose(0, null)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} onRemove={() => choose(1, null)} />
       {/* NEW TOGGLE BUTTON */}
   <button 
     className="primary-button" 
@@ -611,7 +615,10 @@ export default function SpaceView() {
 
   
 
-  
+  <div className="stage-top">
+    <span>EARTH-CENTERED INERTIAL VIEW</span>
+    <span>DRAG TO ORBIT · SCROLL TO ZOOM</span>
+  </div>
 
   <Canvas
     camera={{ position: [7.8, 4.2, 8.4], fov: 36  }}
@@ -630,7 +637,7 @@ export default function SpaceView() {
 
 <directionalLight
   position={[8, 6, 8]}
-  intensity={3}
+  intensity={0.9}
   color="#ffffff"
 />
 
@@ -813,13 +820,10 @@ export default function SpaceView() {
     </div>
 
     {inspection ? (
-      <InspectionCard
-        item={inspection}
-        color={inspection.color}
-      />
+      <InspectionCard item={inspection} color={inspection.color} />
     ) : (
       <p className="analysis-empty">
-        Individual data stays hidden until you click a glowing satellite marker.
+        Click either selected orbital satellite to view its live telemetry.
       </p>
     )}
 
@@ -830,4 +834,3 @@ export default function SpaceView() {
 </section>
 }
    
-

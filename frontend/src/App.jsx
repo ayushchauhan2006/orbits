@@ -7,6 +7,7 @@ import './components/Heatmap.css'
 const API = 'http://localhost:3000'
 const tabs = ['Mission control', 'Catalog', 'Screening', 'Heatmap', 'Methodology']
 
+
 function Catalog() {
  const [objects,setObjects]=useState([]),[query,setQuery]=useState('')
  useEffect(()=>{fetch(`${API}/api/satellites`).then(r=>r.json()).then(setObjects).catch(()=>{})},[])
