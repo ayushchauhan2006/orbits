@@ -627,7 +627,7 @@ export default function SpaceView() {
 
 <directionalLight
   position={[8, 6, 8]}
-  intensity={3}
+  intensity={0.9}
   color="#ffffff"
 />
 
