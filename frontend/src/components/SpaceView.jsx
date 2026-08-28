@@ -475,7 +475,7 @@ function OrbitDisplay({ selected, leftCollapsed, showAllActive, setShowAllActive
 export default function SpaceView() {
   const [catalog, setCatalog] = useState([]),
   [selected, setSelected] = useState([null, null]),
-  [inspection, setInspection] = useState(null),
+  [inspection, setInspection] = useState([null, null]),
   [screening, setScreening] = useState(null),
   [error, setError] = useState(''),
   [panelWidth, setPanelWidth] = useState(380),
@@ -525,21 +525,25 @@ export default function SpaceView() {
 }, [selected])
 
   useEffect(() => {
-  const loadObjectInfo = async () => {
+    const updateTelemetry = () => {
+      setInspection(selected.map((item, index) => {
+        if (!item) return null
 
-    const [infoA, infoB] = await Promise.all([
-      fetchSatelliteInfo(selected[0]?.NORAD_CAT_ID),
-      fetchSatelliteInfo(selected[1]?.NORAD_CAT_ID)
-    ])
+        try {
+          const rec = satellite.json2satrec(item)
+          const info = snapshot(item, rec)
+          return info ? { ...info, color: colors[index] } : null
+        } catch {
+          return null
+        }
+      }))
+    }
 
-    setObjectInfo({
-      A: infoA,
-      B: infoB
-    })
-  }
+    updateTelemetry()
+    const id = setInterval(updateTelemetry, 1000)
 
-  loadObjectInfo()
-}, [selected])
+    return () => clearInterval(id)
+  }, [selected])
 
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
   const watchRecords = useMemo(() => {
@@ -566,17 +570,21 @@ export default function SpaceView() {
     .filter(Boolean)
 
 }, [catalog])
-  const inspect = (item, color) => {
-    setInspection({ ...item, color })
-  }
+  const inspect = (item, index) => {
+  setInspection(prev => {
+    const next = [...prev]
+    next[index] = {
+      ...item,
+      color: colors[index]
+    }
+    return next
+  })
+}
 
   const choose = (index, item) => {
 
   // Clear old analysis immediately
   setScreening(null)
-
-  // Clear old satellite inspection
-  setInspection(null)
 
   // Clear debris warning for this slot
   setDebrisWatch(old =>
@@ -601,17 +609,19 @@ export default function SpaceView() {
       const rec = satellite.json2satrec(satelliteData);
       const info = snapshot(satelliteData, rec);
       if (info) {
-        setInspection({ ...info, color: colors[0] });
+        setInspection(prev => {
+  const next = [...prev]
+  next[0] = {
+    ...info,
+    color: colors[0]
+  }
+  return next
+})
       }
     } catch (e) {
-      setInspection(null);
+       setInspection([null, null]);
     }
   };
-<<<<<<< HEAD
-  return <section className="mission-view" style={{ gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px` }}>
-    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p>
-    <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} onRemove={() => choose(0, null)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} onRemove={() => choose(1, null)} />
-=======
   return <section
     className="mission-view"
     style={{
@@ -625,7 +635,6 @@ export default function SpaceView() {
   Track orbital paths, monitor nearby debris, and screen potential conjunctions.
 </p>
     <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />
->>>>>>> deb2e632fa29b881a06dd7ca6d191b5a06ce9ae4
       {/* NEW TOGGLE BUTTON */}
   <button 
     className="primary-button" 
@@ -691,17 +700,17 @@ export default function SpaceView() {
         <Orbit
           data={item}
           color={colors[i]}
-          active={inspection?.norad === item.NORAD_CAT_ID}
+          active={inspection[i]?.norad === item.NORAD_CAT_ID}
           watch={debrisWatch[i]}
         />
 
         <SatelliteMarker
           data={item}
           color={colors[i]}
-          active={inspection?.norad === item.NORAD_CAT_ID}
+          active={inspection[i]?.norad === item.NORAD_CAT_ID}
           watch={debrisWatch[i]}
           debrisRecords={watchRecords}
-          onInspect={x => inspect(x, colors[i])}
+          onInspect={x => inspect(x, i)}
           onWatchUpdate={watch =>
             setDebrisWatch(old =>
               old.map((x, index) =>
@@ -846,16 +855,34 @@ export default function SpaceView() {
 </div>
 
     <div className="telemetry-heading">
-      INFORMATION · CLICK A SATELLITE
+      SELECTED OBJECTS
     </div>
 
-    {inspection ? (
-      <InspectionCard item={inspection} color={inspection.color} />
-    ) : (
-      <p className="analysis-empty">
-        Click either selected orbital satellite to view its live telemetry.
-      </p>
-    )}
+{inspection[0] && (
+  <>
+    <h4>OBJECT A</h4>
+    <InspectionCard
+      item={inspection[0]}
+      color={colors[0]}
+    />
+  </>
+)}
+
+{inspection[1] && (
+  <>
+    <h4>OBJECT B</h4>
+    <InspectionCard
+      item={inspection[1]}
+      color={colors[1]}
+    />
+  </>
+)}
+
+{!inspection[0] && !inspection[1] && (
+  <p className="analysis-empty">
+    Click either selected orbital satellite to view its live telemetry.
+  </p>
+)}
 
   </div>
 
