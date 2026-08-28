@@ -179,7 +179,16 @@
   z-index: 30;
 
   pointer-events: none;
+}.orbit-display-toggle {
+  pointer-events: auto;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 12px 10px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
 }
+
 .orbit-display-left-collapsed {
   left: 72px;
 }
