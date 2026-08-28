@@ -775,7 +775,7 @@ export default function SpaceView() {
   <div className="rail-content">
 
     <div className="panel-heading">
-      <span>CONJUNCTION ANALYSIS</span>
+      <span>CLOSE APPROACH ASSESSMENT</span>
       <b>24 HORIZON</b>
     </div>
 
@@ -783,17 +783,17 @@ export default function SpaceView() {
       <>
         <div className="pair-names">
           <span>
-            OBJECT 1
+            OBJECT A
             <b>{selected[0].OBJECT_NAME}</b>
           </span>
 
           <span>
-            OBJECT 2
+            OBJECT B
             <b>{selected[1].OBJECT_NAME}</b>
           </span>
         </div>
 
-        <h4>CURRENT</h4>
+        <h4>CURRENT STATE</h4>
 
         <Metric
           label="Separation"
@@ -833,9 +833,9 @@ export default function SpaceView() {
 />
 
 <div className="screening-context">
-  <span>SCREENING CONTEXT</span>
+  <span>SCREENING METHODOLOGY</span>
   <p>
-    Thresholds flag a closer look; they do not estimate collision probability.
+   24-hour screening uses SGP4-propagated positions. Thresholds flag close approach for review; they do not estimate collision probability.
   </p>
 </div>
         
@@ -845,14 +845,7 @@ export default function SpaceView() {
         Choose both objects to calculate a 24-hour minimum-separation screening window.
       </div>
     )}
-    <div className="screening-context">
-  <span>SCREENING CONTEXT</span>
-
-  <p>
-    Paths use SGP4 propagation. Results are visual indicators,
-    not operational collision-avoidance advice.
-  </p>
-</div>
+    
 
     <div className="telemetry-heading">
       SELECTED OBJECTS
