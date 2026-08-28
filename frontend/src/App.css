@@ -1510,3 +1510,98 @@ body {
     display: none !important;
   }
 }
+/* Make the page transparent so the 3D orbital scene can show through */
+.app-shell {
+  background: transparent !important;
+}
+
+.app-shell main {
+  background: transparent !important;
+}
+
+.topbar {
+  background: rgba(7, 16, 29, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+/* =========================================
+   3D ORBITAL BACKGROUND BEHIND TOP MENU
+   ========================================= */
+
+.app-shell {
+  background: transparent !important;
+}
+
+.app-shell main {
+  background: transparent !important;
+}
+
+.topbar {
+  background: rgba(7, 16, 29, 0.35) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+/* =========================================
+   MAKE 3D SPACE CONTINUE BEHIND TOP MENU
+   ========================================= */
+
+.app-shell {
+  position: relative;
+  background: transparent !important;
+}
+
+.topbar {
+  position: relative;
+  z-index: 100 !important;
+  background: rgba(7, 16, 29, 0.38) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.mission-view {
+  overflow: hidden !important;
+}
+
+.orbital-stage {
+  top: 0 !important;
+  height: 100% !important;
+  z-index: 1 !important;
+}/* =================================================
+   SPACE BACKGROUND CONTINUES BEHIND TOP MENU
+   ================================================= */
+
+.app-shell {
+  position: relative !important;
+  background: #07101d !important;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  /* only fills the area above the 3D scene */
+  height: 106px;
+
+  background:
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(40, 65, 85, 0.35),
+      rgba(7, 16, 29, 0) 65%
+    ),
+    #07101d;
+
+  z-index: 0;
+  pointer-events: none;
+}
+
+.topbar {
+  position: relative !important;
+  z-index: 100 !important;
+
+  background: rgba(7, 16, 29, 0.35) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

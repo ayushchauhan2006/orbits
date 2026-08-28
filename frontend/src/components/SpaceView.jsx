@@ -394,7 +394,18 @@ function Search({ catalog, label, selected, color, onSelect }) {
 />{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => {  onSelect(x); setTerm('')}}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
-const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
+const Metric = ({ label, value, hint }) => (
+  <div className="metric-box">
+    <div className="metric-box-header">
+      {label}
+    </div>
+
+    <div className="metric-box-value">
+      <strong>{value}</strong>
+      {hint && <small>{hint}</small>}
+    </div>
+  </div>
+)
 const signed = n => `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)} km`
 function InspectionCard({ item, color }) { return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div> }
 function DebrisWatchPanel({ selected, watches }) { return <section className="debris-watch-panel"><h3>DEBRIS WATCH · 50 KM RANGE</h3>{selected.some(Boolean) ? selected.map((item, index) => { const watch = watches[index]; return item && <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}><div><i style={{ background: colors[index] }} /><strong>{item.OBJECT_NAME}</strong></div><b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>{watch?.distanceKm && <span>{watch.insideRange ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away` : `Nearest debris: ${watch.distanceKm.toFixed(1)} km away`}</span>}</div> }) : <p>Select a satellite to start the live debris watch.</p>}</section> }
@@ -766,19 +777,21 @@ export default function SpaceView() {
           value={`${screening.relativeSpeed.toFixed(4)} km/s`}
         />
 
-        <div className="screening-state">
-          <span>SCREENING STATUS</span>
+  <Metric
+  label="Screening Status"
+  value={
+    screening.distance < 10
+      ? 'REVIEW RECOMMENDED'
+      : 'MONITOR'
+  }
+/>
 
-          <strong className={screening.distance < 10 ? 'attention' : ''}>
-            {screening.distance < 10
-              ? 'REVIEW RECOMMENDED'
-              : 'MONITOR'}
-          </strong>
-
-          <p>
-            Thresholds flag a closer look; they do not estimate collision probability.
-          </p>
-        </div>
+<div className="screening-context">
+  <span>SCREENING CONTEXT</span>
+  <p>
+    Thresholds flag a closer look; they do not estimate collision probability.
+  </p>
+</div>
         
       </>
     ) : (
