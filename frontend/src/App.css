@@ -67,6 +67,8 @@ nav button {
 
   font-size: 12px;
   font-family: inherit;
+  text-transform: uppercase;
+letter-spacing: 1px;
 
   white-space: nowrap;
 
@@ -76,6 +78,14 @@ nav button {
     background .25s ease,
     color .25s ease,
     transform .25s ease;
+}
+    .wordmark-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+
 }
 
 nav button:hover {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import SpaceView from './components/SpaceView'
 import earthTexture from './assets/earth-texture.png'
+import orbitalLogo from './assets/orbital-logo.png'
 import './App.css'
 import './components/Heatmap.css'
 const API = 'http://localhost:3000'
@@ -674,11 +675,14 @@ other available catalogue information.
                 setTab('Mission control')
               }
             >
-              <i>◌</i>
+              <img
+  src={orbitalLogo}
+  alt="Orbita"
+  className="wordmark-logo"
+/>
 
               <span>
-                ORBITAL<br />
-                <small>INTELLIGENCE</small>
+                ORBITAL
               </span>
             </button>
 
