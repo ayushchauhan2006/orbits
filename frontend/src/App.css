@@ -96,9 +96,9 @@ body {
   background:
     linear-gradient(
       to bottom,
-      rgba(0,0,0,0.05),
-      rgba(0,0,0,0.20) 45%,
-      rgba(0,0,0,0.70)
+      rgba(0,0,0,0),
+      rgba(0,0,0,0) 45%,
+      rgba(0,0,0,0)
     ) !important;
 
   z-index: 1 !important;
@@ -362,6 +362,348 @@ body {
     right: 15px !important;
 
     font-size: 7px !important;
+  }
+
+}
+
+/* ========================================
+   MENU PAGE
+======================================== */
+
+.menu-screen {
+  position: fixed !important;
+  inset: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  overflow: hidden !important;
+
+  background: #000 !important;
+
+  z-index: 99990 !important;
+}
+
+
+/* BACKGROUND VIDEO */
+
+.menu-video {
+  position: absolute !important;
+
+  top: 0 !important;
+  left: 0 !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: cover !important;
+  object-position: center center !important;
+
+  display: block !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  z-index: 0 !important;
+}
+
+
+/* DARK OVERLAY */
+
+.menu-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  background: rgba(0,0,0,0.30) !important;
+
+  z-index: 1 !important;
+
+  pointer-events: none !important;
+}
+
+
+/* MENU OPTIONS */
+
+.menu-options {
+  position: absolute !important;
+
+  top: 50% !important;
+  left: 50% !important;
+
+  transform: translate(-50%, -50%) !important;
+
+  width: 850px !important;
+  max-width: 85vw !important;
+
+  display: grid !important;
+
+  grid-template-columns: repeat(3, 1fr) !important;
+
+  column-gap: 70px !important;
+  row-gap: 85px !important;
+
+  z-index: 2 !important;
+}
+
+
+/* TEXT BUTTONS */
+
+.menu-options button {
+  appearance: none !important;
+
+  border: none !important;
+
+  background: transparent !important;
+
+  color: white !important;
+
+  padding: 10px !important;
+  margin: 0 !important;
+
+  font-family: inherit !important;
+
+  font-size: 20px !important;
+  font-weight: 400 !important;
+
+  text-align: center !important;
+
+  cursor: pointer !important;
+
+  box-shadow: none !important;
+
+  outline: none !important;
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease !important;
+}
+
+.menu-options button:hover {
+  opacity: 0.65 !important;
+
+  transform: translateY(-2px) !important;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 800px) {
+
+  /* ========================================
+   MENU CONTENT
+======================================== */
+
+.menu-content {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  width: min(1000px, 88vw);
+
+  text-align: center;
+
+  z-index: 2;
+}
+
+
+/* ========================================
+   MENU HEADING
+======================================== */
+
+.menu-heading {
+  margin-bottom: 55px;
+
+  color: white;
+}
+
+.menu-heading span {
+  display: block;
+
+  margin-bottom: 12px;
+
+  font-family: 'DM Mono', monospace;
+
+  font-size: 9px;
+
+  letter-spacing: 4px;
+
+  color: rgba(255,255,255,0.55);
+}
+
+.menu-heading h1 {
+  margin: 0;
+
+  font-size: clamp(30px, 4vw, 50px);
+
+  font-weight: 500;
+
+  letter-spacing: -1px;
+
+  color: white;
+}
+
+.menu-heading p {
+  margin: 12px 0 0;
+
+  font-size: 11px;
+
+  letter-spacing: 1.5px;
+
+  color: rgba(255,255,255,0.5);
+
+  text-transform: uppercase;
+}
+
+
+/* ========================================
+   MENU BUTTON GRID
+======================================== */
+
+.menu-options {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 28px;
+
+  width: 100%;
+}
+
+
+/* ========================================
+   MENU BUTTONS
+======================================== */
+
+.menu-options button {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  min-height: 58px;
+
+  padding: 0 20px;
+
+  border: 1px solid
+    rgba(255,255,255,0.42);
+
+  border-radius: 999px;
+
+  background:
+    rgba(255,255,255,0.07);
+
+  color: white;
+
+  font-family: inherit;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(10px);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.menu-options button:hover {
+  background:
+    rgba(255,255,255,0.16);
+
+  border-color:
+    rgba(255,255,255,0.8);
+
+  transform:
+    translateY(-3px);
+}
+
+.menu-options button b {
+  font-size: 17px;
+
+  font-weight: 400;
+
+  transition:
+    transform 0.25s ease;
+}
+
+.menu-options button:hover b {
+  transform:
+    translateX(5px);
+}
+
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 800px) {
+
+  .menu-content {
+    width: 88vw;
+  }
+
+  .menu-heading {
+    margin-bottom: 35px;
+  }
+
+  .menu-options {
+    grid-template-columns:
+      repeat(2, 1fr);
+
+    gap: 16px;
+  }
+
+  .menu-options button {
+    min-height: 52px;
+
+    font-size: 9px;
+
+    padding: 0 15px;
+  }
+
+}
+
+@media (max-width: 500px) {
+
+  .menu-options {
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+  }
+
+}
+
+}
+
+@media (max-width: 500px) {
+
+  .menu-options {
+    grid-template-columns: 1fr !important;
+
+    row-gap: 30px !important;
   }
 
 }

@@ -319,17 +319,16 @@ export default function App() {
 
   const [showIntro, setShowIntro] = useState(true)
   const [showLoading, setShowLoading] = useState(false)
-
+  const [showMenu, setShowMenu] = useState(false)
   const enterWebsite = () => {
-    setShowIntro(false)
-    setShowLoading(true)
+  setShowIntro(false)
+  setShowLoading(true)
 
-    setTimeout(() => {
-      setShowLoading(false)
-      setTab('Mission control')
-    }, 2200)
-  }
-
+  setTimeout(() => {
+    setShowLoading(false)
+    setShowMenu(true)
+  }, 2200)
+}
   return (
     <>
       {/* ========================================
@@ -411,12 +410,109 @@ export default function App() {
 
         </section>
       )}
+            {/* ========================================
+          MENU PAGE
+      ======================================== */}
 
+      {showMenu && (
+        <section className="menu-screen">
+
+          <video
+            className="menu-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+          >
+            <source
+              src="/menu-page.mp4"
+              type="video/mp4"
+            />
+          </video>
+
+          <div className="menu-overlay" />
+          
+          <div className="menu-content">
+
+  <div className="menu-heading">
+    <span>ORBITAL INTELLIGENCE</span>
+    <h1>Choose Your Mission</h1>
+    <p>Select an interface to continue</p>
+  </div>
+
+  <div className="menu-options">
+
+    <button
+      onClick={() => {
+        setTab('Mission control')
+        setShowMenu(false)
+      }}
+    >
+      <span>Open Visualization</span>
+      <b>→</b>
+    </button>
+
+    <button
+      onClick={() => {
+        setTab('Catalog')
+        setShowMenu(false)
+      }}
+    >
+      <span>Satellite Search</span>
+      <b>→</b>
+    </button>
+
+    <button
+      onClick={() => {
+        setTab('Catalog')
+        setShowMenu(false)
+      }}
+    >
+      <span>Catalog</span>
+      <b>→</b>
+    </button>
+
+    <button
+      onClick={() => {
+        setTab('Screening')
+        setShowMenu(false)
+      }}
+    >
+      <span>Screening</span>
+      <b>→</b>
+    </button>
+
+    <button
+      onClick={() => {
+        setTab('Heatmap')
+        setShowMenu(false)
+      }}
+    >
+      <span>Heatmap</span>
+      <b>→</b>
+    </button>
+
+    <button
+      onClick={() => {
+        setTab('Methodology')
+        setShowMenu(false)
+      }}
+    >
+      <span>Methodology</span>
+      <b>→</b>
+    </button>
+
+  </div>
+
+</div>
+
+        </section>
+      )}
       {/* ========================================
           EXISTING WEBSITE
       ======================================== */}
 
-      {!showIntro && !showLoading && (
+      {!showIntro && !showLoading && !showMenu && (
         <div className="app-shell">
 
           {/* ALWAYS VISIBLE DASHBOARD */}
