@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import * as satellite from 'satellite.js'
-import { Canvas, useFrame, useLoader } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { Line, OrbitControls, Stars, useGLTF } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 import earthModel from '../assets/earth.glb'
 import earthTexture from '../assets/earth-texture.png'
+const earthTextureLoader = new THREE.TextureLoader()
+const earthTexturePreloaded = earthTextureLoader.load(earthTexture)
+
+earthTexturePreloaded.colorSpace = THREE.SRGBColorSpace
+earthTexturePreloaded.wrapS = THREE.ClampToEdgeWrapping
+earthTexturePreloaded.wrapT = THREE.ClampToEdgeWrapping
+earthTexturePreloaded.anisotropy = 8
 import './SpaceView.css'
 import './MissionPolish.css'
 
@@ -43,21 +50,6 @@ const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
 function Earth() {
   const earthRef = useRef()
 
-  const texture = useLoader(
-    THREE.TextureLoader,
-    earthTexture
-  )
-
-  useEffect(() => {
-    if (!texture) return
-
-    texture.colorSpace = THREE.SRGBColorSpace
-    texture.wrapS = THREE.ClampToEdgeWrapping
-    texture.wrapT = THREE.ClampToEdgeWrapping
-    texture.anisotropy = 8
-    texture.needsUpdate = true
-  }, [texture])
-
   useFrame((_, delta) => {
     if (earthRef.current) {
       earthRef.current.rotation.y += delta * 0.02
@@ -69,7 +61,7 @@ function Earth() {
       <sphereGeometry args={[3.2, 96, 96]} />
 
       <meshStandardMaterial
-        map={texture}
+        map={earthTexturePreloaded}
         color="#ffffff"
         roughness={0.85}
         metalness={0}
@@ -77,7 +69,6 @@ function Earth() {
     </mesh>
   )
 }
-
 
 
 useGLTF.preload(earthModel)
@@ -388,10 +379,14 @@ function screenPair(first, second) {
   }
 }
 
-function Search({ catalog, label, selected, color, onSelect }) {
+function Search({ catalog, label, selected, color, onSelect, onRemove }) {
   const [term, setTerm] = useState('')
   const results = useMemo(() => term.trim() ? catalog.filter(x => x.OBJECT_TYPE === 'ACTIVE' && `${x.OBJECT_NAME} ${x.NORAD_CAT_ID}`.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : [], [catalog, term])
-  return <div className="object-picker"><label>{label}</label><input
+  const removeSelection = () => {
+  onSelect(null)
+  setTerm('')
+}
+  return <div className="object-picker"><label>{label}</label><div className="search-input-wrap"><input
   value={selected ? selected.OBJECT_NAME : term}
   onChange={e => {
     if (selected) {
@@ -400,18 +395,36 @@ function Search({ catalog, label, selected, color, onSelect }) {
     setTerm(e.target.value)
   }}
   placeholder="Name or NORAD ID"
-/>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => {  onSelect(x); setTerm('')}}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
+ />{selected && <button className="remove-selection" type="button" onClick={removeSelection} title={`Remove ${selected.OBJECT_NAME}`} aria-label={`Remove ${selected.OBJECT_NAME}`}>×</button>}</div>{results.length > 0 && <div className="picker-results">{results.map(x => <button key={x.NORAD_CAT_ID} onClick={() => { onSelect(x); setTerm('') }}><span>{x.OBJECT_NAME}</span><small>NORAD {x.NORAD_CAT_ID}</small></button>)}</div>}{selected && <div className="selected-object"><i style={{ background: color }} />{selected.OBJECT_NAME}</div>}</div>
 }
 
-const Metric = ({ label, value, hint }) => <div className="metric"><span>{label}</span><strong>{value}</strong>{hint && <small>{hint}</small>}</div>
+const Metric = ({ label, value, hint }) => (
+  <div className="metric-box">
+    <div className="metric-box-header">
+      {label}
+    </div>
+
+    <div className="metric-box-value">
+      <strong>{value}</strong>
+      {hint && <small>{hint}</small>}
+    </div>
+  </div>
+)
 const signed = n => `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)} km`
 function InspectionCard({ item, color }) { return <div className="telemetry-card"><div><i style={{ background: color }} /><span>{item.name}</span></div><p>NORAD ID <b>{item.norad}</b></p><section><span>LATITUDE <b>{item.latitude.toFixed(4)}°</b></span><span>LONGITUDE <b>{item.longitude.toFixed(4)}°</b></span><span>ALTITUDE <b>{item.altitude.toFixed(2)} km</b></span><span>VELOCITY <b>{item.speed.toFixed(3)} km/s</b></span><span>ECI X <b>{signed(item.eci.x)}</b></span><span>ECI Y <b>{signed(item.eci.y)}</b></span><span>ECI Z <b>{signed(item.eci.z)}</b></span></section><em>● LIVE {item.updatedAt.toLocaleTimeString()}</em></div> }
 function DebrisWatchPanel({ selected, watches }) { return <section className="debris-watch-panel"><h3>DEBRIS WATCH · 50 KM RANGE</h3>{selected.some(Boolean) ? selected.map((item, index) => { const watch = watches[index]; return item && <div className={`watch-result ${watch?.insideRange ? 'alert' : ''}`} key={item.NORAD_CAT_ID}><div><i style={{ background: colors[index] }} /><strong>{item.OBJECT_NAME}</strong></div><b>{watch ? (watch.insideRange ? 'DEBRIS DETECTED' : 'CLEAR') : 'CHECKING…'}</b>{watch?.distanceKm && <span>{watch.insideRange ? `${watch.name} is ${watch.distanceKm.toFixed(1)} km away` : `Nearest debris: ${watch.distanceKm.toFixed(1)} km away`}</span>}</div> }) : <p>Select a satellite to start the live debris watch.</p>}</section> }
 
-function OrbitDisplay({ selected }) {
+function OrbitDisplay({ selected, leftCollapsed, showAllActive, setShowAllActive, satelliteCount }) {
   return (
-    <div className="orbit-display">
-
+    <div className={`orbit-display ${leftCollapsed ? 'orbit-display-left-collapsed' : ''}`}>
+      <button
+  className="primary-button orbit-display-toggle"
+  onClick={() => setShowAllActive(!showAllActive)}
+>
+  {showAllActive
+    ? 'HIDE ALL SATELLITES'
+    : `SHOW ALL ${satelliteCount.toLocaleString()} SATELLITES`}
+</button>
       <div className="orbit-display-box orbit-display-a">
 
         <div className="orbit-display-title">
@@ -460,7 +473,16 @@ function OrbitDisplay({ selected }) {
 }
 
 export default function SpaceView() {
-  const [catalog, setCatalog] = useState([]), [selected, setSelected] = useState([null, null]), [inspection, setInspection] = useState(null), [screening, setScreening] = useState(null), [error, setError] = useState(''), [panelWidth, setPanelWidth] = useState(380), [resizing, setResizing] = useState(false), [leftCollapsed, setLeftCollapsed] = useState(false), [rightCollapsed, setRightCollapsed] = useState(false), [debrisWatch, setDebrisWatch] = useState([null, null])
+  const [catalog, setCatalog] = useState([]),
+  [selected, setSelected] = useState([null, null]),
+  [inspection, setInspection] = useState([null, null]),
+  [screening, setScreening] = useState(null),
+  [error, setError] = useState(''),
+  [panelWidth, setPanelWidth] = useState(380),
+  [resizing, setResizing] = useState(false),
+  [leftCollapsed, setLeftCollapsed] = useState(true),
+  [rightCollapsed, setRightCollapsed] = useState(true),
+  [debrisWatch, setDebrisWatch] = useState([null, null])
   const [showAllActive, setShowAllActive] = useState(false)
   const [objectInfo, setObjectInfo] = useState({
   A: null,
@@ -503,21 +525,25 @@ export default function SpaceView() {
 }, [selected])
 
   useEffect(() => {
-  const loadObjectInfo = async () => {
+    const updateTelemetry = () => {
+      setInspection(selected.map((item, index) => {
+        if (!item) return null
 
-    const [infoA, infoB] = await Promise.all([
-      fetchSatelliteInfo(selected[0]?.NORAD_CAT_ID),
-      fetchSatelliteInfo(selected[1]?.NORAD_CAT_ID)
-    ])
+        try {
+          const rec = satellite.json2satrec(item)
+          const info = snapshot(item, rec)
+          return info ? { ...info, color: colors[index] } : null
+        } catch {
+          return null
+        }
+      }))
+    }
 
-    setObjectInfo({
-      A: infoA,
-      B: infoB
-    })
-  }
+    updateTelemetry()
+    const id = setInterval(updateTelemetry, 1000)
 
-  loadObjectInfo()
-}, [selected])
+    return () => clearInterval(id)
+  }, [selected])
 
   useEffect(() => { const move = e => { if (resizing) setPanelWidth(Math.max(380, Math.min(window.innerWidth - 430, window.innerWidth - e.clientX))) }; const stop = () => setResizing(false); window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) } }, [resizing])
   const watchRecords = useMemo(() => {
@@ -544,13 +570,21 @@ export default function SpaceView() {
     .filter(Boolean)
 
 }, [catalog])
+  const inspect = (item, index) => {
+  setInspection(prev => {
+    const next = [...prev]
+    next[index] = {
+      ...item,
+      color: colors[index]
+    }
+    return next
+  })
+}
+
   const choose = (index, item) => {
 
   // Clear old analysis immediately
   setScreening(null)
-
-  // Clear old satellite inspection
-  setInspection(null)
 
   // Clear debris warning for this slot
   setDebrisWatch(old =>
@@ -575,14 +609,31 @@ export default function SpaceView() {
       const rec = satellite.json2satrec(satelliteData);
       const info = snapshot(satelliteData, rec);
       if (info) {
-        setInspection({ ...info, color: colors[0] });
+        setInspection(prev => {
+  const next = [...prev]
+  next[0] = {
+    ...info,
+    color: colors[0]
+  }
+  return next
+})
       }
     } catch (e) {
-      setInspection(null);
+       setInspection([null, null]);
     }
   };
-  return <section className="mission-view" style={{ gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px` }}>
-    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p>
+  return <section
+    className="mission-view"
+    style={{
+      gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px`
+    }}>
+    <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><h1>
+  Monitor the<br />
+  Space Around<br />
+  Earth.
+</h1><p className="mission-copy">
+  Track orbital paths, monitor nearby debris, and screen potential conjunctions.
+</p>
     <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />
       {/* NEW TOGGLE BUTTON */}
   <button 
@@ -619,7 +670,7 @@ export default function SpaceView() {
 
 <directionalLight
   position={[8, 6, 8]}
-  intensity={3}
+  intensity={0.9}
   color="#ffffff"
 />
 
@@ -649,17 +700,17 @@ export default function SpaceView() {
         <Orbit
           data={item}
           color={colors[i]}
-          active={inspection?.norad === item.NORAD_CAT_ID}
+          active={inspection[i]?.norad === item.NORAD_CAT_ID}
           watch={debrisWatch[i]}
         />
 
         <SatelliteMarker
           data={item}
           color={colors[i]}
-          active={inspection?.norad === item.NORAD_CAT_ID}
+          active={inspection[i]?.norad === item.NORAD_CAT_ID}
           watch={debrisWatch[i]}
           debrisRecords={watchRecords}
-          onInspect={x => inspect(x, colors[i])}
+          onInspect={x => inspect(x, i)}
           onWatchUpdate={watch =>
             setDebrisWatch(old =>
               old.map((x, index) =>
@@ -688,7 +739,13 @@ export default function SpaceView() {
 
   </Canvas>
 
- <OrbitDisplay selected={selected} />
+<OrbitDisplay
+  selected={selected}
+  leftCollapsed={leftCollapsed}
+  showAllActive={showAllActive}
+  setShowAllActive={setShowAllActive}
+  satelliteCount={catalog.filter(c => c.OBJECT_TYPE === 'ACTIVE').length}
+/>
 
 </div>
 
@@ -718,7 +775,7 @@ export default function SpaceView() {
   <div className="rail-content">
 
     <div className="panel-heading">
-      <span>CONJUNCTION ANALYSIS</span>
+      <span>CLOSE APPROACH ASSESSMENT</span>
       <b>24 HORIZON</b>
     </div>
 
@@ -726,17 +783,17 @@ export default function SpaceView() {
       <>
         <div className="pair-names">
           <span>
-            OBJECT 1
+            OBJECT A
             <b>{selected[0].OBJECT_NAME}</b>
           </span>
 
           <span>
-            OBJECT 2
+            OBJECT B
             <b>{selected[1].OBJECT_NAME}</b>
           </span>
         </div>
 
-        <h4>CURRENT</h4>
+        <h4>CURRENT STATE</h4>
 
         <Metric
           label="Separation"
@@ -766,19 +823,21 @@ export default function SpaceView() {
           value={`${screening.relativeSpeed.toFixed(4)} km/s`}
         />
 
-        <div className="screening-state">
-          <span>SCREENING STATUS</span>
+  <Metric
+  label="Screening Status"
+  value={
+    screening.distance < 10
+      ? 'REVIEW RECOMMENDED'
+      : 'MONITOR'
+  }
+/>
 
-          <strong className={screening.distance < 10 ? 'attention' : ''}>
-            {screening.distance < 10
-              ? 'REVIEW RECOMMENDED'
-              : 'MONITOR'}
-          </strong>
-
-          <p>
-            Thresholds flag a closer look; they do not estimate collision probability.
-          </p>
-        </div>
+<div className="screening-context">
+  <span>SCREENING METHODOLOGY</span>
+  <p>
+   24-hour screening uses SGP4-propagated positions. Thresholds flag close approach for review; they do not estimate collision probability.
+  </p>
+</div>
         
       </>
     ) : (
@@ -786,29 +845,37 @@ export default function SpaceView() {
         Choose both objects to calculate a 24-hour minimum-separation screening window.
       </div>
     )}
-    <div className="screening-context">
-  <span>SCREENING CONTEXT</span>
-
-  <p>
-    Paths use SGP4 propagation. Results are visual indicators,
-    not operational collision-avoidance advice.
-  </p>
-</div>
+    
 
     <div className="telemetry-heading">
-      INFORMATION · CLICK A SATELLITE
+      SELECTED OBJECTS
     </div>
 
-    {inspection ? (
-      <InspectionCard
-        item={inspection}
-        color={inspection.color}
-      />
-    ) : (
-      <p className="analysis-empty">
-        Individual data stays hidden until you click a glowing satellite marker.
-      </p>
-    )}
+{inspection[0] && (
+  <>
+    <h4>OBJECT A</h4>
+    <InspectionCard
+      item={inspection[0]}
+      color={colors[0]}
+    />
+  </>
+)}
+
+{inspection[1] && (
+  <>
+    <h4>OBJECT B</h4>
+    <InspectionCard
+      item={inspection[1]}
+      color={colors[1]}
+    />
+  </>
+)}
+
+{!inspection[0] && !inspection[1] && (
+  <p className="analysis-empty">
+    Click either selected orbital satellite to view its live telemetry.
+  </p>
+)}
 
   </div>
 
@@ -817,4 +884,3 @@ export default function SpaceView() {
 </section>
 }
    
-

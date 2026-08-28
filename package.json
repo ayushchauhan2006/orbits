@@ -1,11 +1,7 @@
 {
   "dependencies": {
-<<<<<<< HEAD
     "@dotlottie/player-component": "^2.7.12",
     "@lottiefiles/dotlottie-react": "^0.19.15",
-=======
-    "@react-three/drei": "^10.7.8",
->>>>>>> Disha
     "three": "^0.185.1"
   },
   "devDependencies": {

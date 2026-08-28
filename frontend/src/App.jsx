@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import SpaceView from './components/SpaceView'
 import earthTexture from './assets/earth-texture.png'
+import orbitalLogo from './assets/orbital-logo.png'
 import './App.css'
 import './components/Heatmap.css'
 const API = 'http://localhost:3000'
 const tabs = ['Mission control', 'Catalog', 'Screening', 'Heatmap', 'Methodology']
 
+
 function Catalog() {
  const [objects,setObjects]=useState([]),[query,setQuery]=useState('')
  useEffect(()=>{fetch(`${API}/api/satellites`).then(r=>r.json()).then(setObjects).catch(()=>{})},[])
  const results=useMemo(()=>objects.filter(x=>`${x.name} ${x.noradId}`.toLowerCase().includes(query.toLowerCase())).slice(0,100),[objects,query])
- return <section className="content-page"><div className="page-intro"><div><span>ORBITAL CATALOG</span><h1>Track the objects you care about.</h1><p>Current propagated positions, derived from the loaded element set.</p></div><b>{objects.length.toLocaleString()||'—'}<small>OBJECTS</small></b></div><input className="catalog-search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by object name or NORAD ID"/><div className="catalog-table"><div className="table-head"><span>OBJECT</span><span>NORAD</span><span>ALTITUDE</span><span>POSITION</span></div>{results.map(x=><div className="table-row" key={x.id}><strong>{x.name}</strong><span>{x.noradId}</span><span>{(x.altitude/1000).toFixed(0)} km</span><span>{x.latitude.toFixed(2)}° / {x.longitude.toFixed(2)}°</span></div>)}</div></section>
+ return <section className="content-page"><div className="page-intro"><div><span>ORBITAL CATALOG</span><h1>Monitor activity across Earth orbit.</h1><p>Real-time orbital positions derived from the current element set.</p></div><b>{objects.length.toLocaleString()||'—'}<small>OBJECTS</small></b></div><input className="catalog-search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by object name or NORAD ID"/><div className="catalog-table"><div className="table-head"><span>OBJECT</span><span>NORAD</span><span>ALTITUDE</span><span>POSITION</span></div>{results.map(x=><div className="table-row" key={x.id}><strong>{x.name}</strong><span>{x.noradId}</span><span>{(x.altitude/1000).toFixed(0)} km</span><span>{x.latitude.toFixed(2)}° / {x.longitude.toFixed(2)}°</span></div>)}</div></section>
 }
 function Screening() {
  const [data,setData]=useState(null),[loading,setLoading]=useState(false),[sort,setSort]=useState('likelihood'),[error,setError]=useState('')
@@ -18,7 +20,7 @@ function Screening() {
  useEffect(()=>{load()},[])
  const rank={HIGH:4,MEDIUM:3,LOW:2,'VERY LOW':1}
  const rows=[...(data?.risks||[])].sort((a,b)=>sort==='likelihood'?(rank[b.estimatedLikelihood]-rank[a.estimatedLikelihood]||a.missDistanceKm-b.missDistanceKm):sort==='density'?b.nearbyDebrisCount-a.nearbyDebrisCount:sort==='speed'?b.relativeVelocityKmS-a.relativeVelocityKmS:a.missDistanceKm-b.missDistanceKm)
- return <section className="content-page"><div className="page-intro"><div><span>CATALOGUE SCREENING</span><h1>Estimated collision likelihood.</h1><p>Qualitative likelihood from propagated proximity, relative motion and nearby debris.</p></div><button className="primary-button" onClick={load}>{loading?'SCREENING…':'REFRESH SCREEN'}</button></div><div className="important-note"><b>Prototype estimate</b><p>High, Medium, Low and Very Low are qualitative likelihood indicators. They are not an operational probability of collision (Pc) and must not be used for avoidance decisions.</p></div>{error&&<div className="screening-error">{error}</div>}<div className="screen-sort"><span>Sort by</span>{[['likelihood','Likelihood'],['distance','Separation'],['density','Nearby debris'],['speed','Relative speed']].map(([key,label])=><button className={sort===key?'active':''} key={key} onClick={()=>setSort(key)}>{label}</button>)}</div><div className="catalog-table"><div className="table-head"><span>ACTIVE SATELLITE / DEBRIS</span><span>EST. LIKELIHOOD</span><span>SEPARATION</span><span>NEARBY DEBRIS</span><span>RELATIVE SPEED</span></div>{rows.map(x => {
+ return <section className="content-page"><div className="page-intro"><div><span>CATALOGUE SCREENING</span><h1>Assess potential conjunction risk.</h1><p>Risk indicators derived from orbital proximity, relative motion, and nearby debris.</p></div><button className="primary-button" onClick={load}>{loading?'SCREENING…':'REFRESH SCREEN'}</button></div><div className="important-note"><b>Prototype estimate</b><p>High, Medium, Low and Very Low are qualitative likelihood indicators. They are not an operational probability of collision (Pc) and must not be used for avoidance decisions.</p></div>{error&&<div className="screening-error">{error}</div>}<div className="screen-sort"><span>Sort by</span>{[['likelihood','Likelihood'],['distance','Separation'],['density','Nearby debris'],['speed','Relative speed']].map(([key,label])=><button className={sort===key?'active':''} key={key} onClick={()=>setSort(key)}>{label}</button>)}</div><div className="catalog-table"><div className="table-head"><span>ACTIVE SATELLITE / DEBRIS</span><span>EST. LIKELIHOOD</span><span>SEPARATION</span><span>NEARBY DEBRIS</span><span>RELATIVE SPEED</span></div>{rows.map(x => {
   // 1. Grab the names
   const satellite = x.type1 === 'DEBRIS' ? x.object2 : x.object1;
   const debris = x.type1 === 'DEBRIS' ? x.object1 : x.object2;
@@ -126,7 +128,7 @@ function Heatmap() {
 
         <div className="heatmap-title">
           <span>ORBITAL DENSITY HEATMAP</span>
-          <h1>Near-Earth population density</h1>
+          <h1>SPACE OBJECT DENSITY ANALYSIS</h1>
           <p>
             Propagated catalogue distribution across latitude and longitude.
           </p>
@@ -401,7 +403,7 @@ export default function App() {
         <section className="loading-screen">
 
           <div className="loading-logo">
-            ORBITAL
+            ORBITRA
           </div>
 
           <div className="loader-ring" />
@@ -674,11 +676,14 @@ other available catalogue information.
                 setTab('Mission control')
               }
             >
-              <i>◌</i>
+              <img
+  src={orbitalLogo}
+  alt="Orbita"
+  className="wordmark-logo"
+/>
 
               <span>
-                ORBITAL<br />
-                <small>INTELLIGENCE</small>
+                ORBITAL
               </span>
             </button>
 
@@ -699,10 +704,6 @@ other available catalogue information.
                 </button>
               ))}
             </nav>
-
-            <div className="system-live">
-              <b /> SYSTEM NOMINAL
-            </div>
 
           </header>
 
@@ -737,21 +738,7 @@ other available catalogue information.
 
           </main>
 
-          <footer>
-            <span>
-              ORBITAL INTELLIGENCE / SIH 2026
-            </span>
-
-            <span>
-              SGP4 PROPAGATION ·
-              CATALOGUE-BASED SCREENING
-            </span>
-
-            <span>
-              NOT FOR OPERATIONAL
-              COLLISION AVOIDANCE
-            </span>
-          </footer>
+  
 
         </div>
       )}

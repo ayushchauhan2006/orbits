@@ -5,17 +5,153 @@
 .pair-names { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid #ffffff12; font: 10px 'DM Mono'; color: #7896ae; }
 .pair-names span { display: grid; grid-template-columns: 78px 1fr; gap: 10px; }
 .pair-names b { color: #edf7fb; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.analysis-rail h4 { margin: 18px 0 2px; color: #86a9c0; font: 10px 'DM Mono'; letter-spacing: 1.5px; }
-.analysis-rail .metric { display: grid; grid-template-columns: 1fr auto; column-gap: 16px; padding: 12px 0; }
-.analysis-rail .metric strong { font-size: 21px; text-align: right; }
-.analysis-rail .metric small { grid-column: 2; text-align: right; }
+.analysis-rail h4 {
+  margin: 20px 0 8px;
+  color: #86c0d8;
+  font: 10px 'DM Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding-left: 2px;
+}
+/* =========================================
+   ANALYSIS FEATURE BOXES
+   ========================================= */
+
+.metric-box {
+  margin: 14px 0;
+  border: 1px solid #24546b;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(8, 22, 35, 0.82);
+}
+
+/* Upper heading section */
+.metric-box-header {
+  padding: 10px 14px;
+  background: rgba(20, 48, 65, 0.9);
+  border-bottom: 1px solid #24546b;
+
+  color: #8db5ca;
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Lower calculated-value section */
+.metric-box-value {
+  min-height: 72px;
+  padding: 12px 14px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+
+  background: rgba(5, 16, 27, 0.78);
+}
+
+.metric-box-value strong {
+  color: #edf7fb;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  text-align: right;
+}
+
+.metric-box-value small {
+  margin-top: 5px;
+
+  color: #789db2;
+  font: 9px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  text-align: right;
+}
 .telemetry-card p { display: flex; justify-content: space-between; }
 .telemetry-card p b { color: #edf7fb; font-weight: 500; }
 .telemetry-card em { display: block; border-top: 1px solid #ffffff12; padding-top: 9px; margin-top: 11px; color: #55e6b2; font: 9px 'DM Mono'; font-style: normal; }
-.mission-rail, .analysis-rail { transition: padding .2s ease, background .2s ease; }
-.mission-rail.collapsed, .analysis-rail.collapsed { min-width: 0; padding: 0; overflow: visible; }
-.mission-rail.collapsed .rail-content, .analysis-rail.collapsed .rail-content { display: none; }
-.collapse-toggle { position: absolute; z-index: 12; top: 18px; width: 28px; height: 31px; border: 1px solid #4e8aa4; border-radius: 4px; background: #10273a; color: #d5f4ff; font-size: 20px; line-height: 1; }
+.mission-rail,
+.analysis-rail {
+  position: relative;
+  z-index: 20;
+
+  width: 320px;
+
+  padding: 22px;
+
+  background: rgba(8, 24, 38, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(85, 216, 255, 0.45);
+  border-radius: 18px;
+
+  box-shadow:
+    0 0 25px rgba(0, 180, 255, 0.12),
+    inset 0 0 20px rgba(85, 216, 255, 0.04);
+
+  transition:
+    width 0.45s ease,
+    padding 0.45s ease,
+    opacity 0.35s ease;
+}
+
+.mission-rail {
+  left: auto;
+}
+
+.analysis-rail {
+  right: auto;
+  min-width: 0;
+}
+
+/* COLLAPSED */
+
+.mission-rail.collapsed,
+.analysis-rail.collapsed {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.mission-rail.collapsed .rail-content,
+.analysis-rail.collapsed .rail-content {
+  display: none;
+}
+.collapse-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  z-index: 50;
+
+  width: 42px;
+  height: 76px;
+
+  border: 1px solid rgba(120, 210, 240, 0.65);
+  border-radius: 12px;
+
+  background: rgba(35, 75, 100, 0.95);
+  color: #e5f8ff;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 0 18px rgba(70, 190, 230, 0.18),
+    inset 0 0 12px rgba(130, 220, 245, 0.08);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
 .collapse-toggle.left { right: 9px; }.collapse-toggle.right { left: 9px; }
 .analysis-rail .metric strong { font-size: 24px; }
 .telemetry-card { margin-top: 12px; padding: 17px 14px; border: 1px solid #2a617e; border-radius: 7px; background: #102131; }
@@ -43,6 +179,18 @@
   z-index: 30;
 
   pointer-events: none;
+}.orbit-display-toggle {
+  pointer-events: auto;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 12px 10px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.orbit-display-left-collapsed {
+  left: 72px;
 }
 
 /* BOX */
@@ -269,4 +417,210 @@
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   line-height: 1.55;
+}
+
+/* =========================================
+   SIDE PANEL / EDGE TAB DESIGN
+   ========================================= */
+
+.mission-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Keep Earth / 3D area as the middle layer */
+.orbital-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  z-index: 1;
+  pointer-events: auto;
+}
+/* LEFT PANEL */
+.mission-rail {
+  position: relative;
+  z-index: 20;
+  min-width: 0;
+
+  transition:
+    width 0.45s cubic-bezier(.22,.61,.36,1),
+    padding 0.45s ease,
+    opacity 0.3s ease;
+}
+
+/* RIGHT PANEL */
+.analysis-rail {
+  position: relative;
+  z-index: 20;
+  min-width: 0;
+
+  transition:
+    width 0.45s cubic-bezier(.22,.61,.36,1),
+    padding 0.45s ease,
+    opacity 0.3s ease;
+}
+
+/* =========================================
+   THIN CLOSED SIDEBARS
+   ========================================= */
+
+.mission-rail.collapsed,
+.analysis-rail.collapsed {
+  min-width: 48px;
+  width: 48px;
+  padding: 0;
+
+  overflow: visible;
+  opacity: 1;
+}
+
+/* Hide the content when closed */
+.mission-rail.collapsed .rail-content,
+.analysis-rail.collapsed .rail-content {
+  display: none;
+}
+
+/* =========================================
+   ARROW TAB
+   ========================================= */
+
+.collapse-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  z-index: 50;
+
+  width: 42px;
+  height: 76px;
+
+  border: 1px solid rgba(90, 190, 220, 0.55);
+  border-radius: 12px;
+
+  background: rgba(10, 31, 46, 0.92);
+  color: #d8f5ff;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 0 18px rgba(50, 190, 230, 0.12),
+    inset 0 0 12px rgba(90, 210, 240, 0.04);
+
+  transition:
+    width 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* LEFT arrow */
+.collapse-toggle.left {
+  right: -21px;
+}
+
+/* RIGHT arrow */
+.collapse-toggle.right {
+  left: -21px;
+}
+
+/* Hover */
+.collapse-toggle:hover {
+  background: rgba(18, 55, 75, 0.96);
+  border-color: rgba(100, 220, 255, 0.9);
+
+  box-shadow:
+    0 0 22px rgba(50, 200, 255, 0.22),
+    inset 0 0 14px rgba(90, 220, 255, 0.08);
+}
+
+/* =========================================
+   OPEN PANEL
+   ========================================= */
+
+.mission-rail:not(.collapsed),
+.analysis-rail:not(.collapsed) {
+  overflow: hidden;
+
+  background: rgba(8, 24, 38, 0.90);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(80, 175, 205, 0.38);
+  border-radius: 18px;
+
+  box-shadow:
+    0 0 25px rgba(0, 170, 220, 0.10),
+    inset 0 0 20px rgba(80, 210, 240, 0.035);
+}
+
+/* =========================================
+   EQUAL PANEL HEIGHT
+   ========================================= */
+
+.mission-rail,
+.analysis-rail {
+  height: calc(100% - 40px);
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   PANEL CONTENT
+   ========================================= */
+
+.mission-rail .rail-content,
+.analysis-rail .rail-content {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 900px) {
+
+  .mission-rail:not(.collapsed),
+  .analysis-rail:not(.collapsed) {
+    width: min(320px, 82vw);
+  }
+
+  .collapse-toggle {
+    width: 40px;
+    height: 68px;
+  }
+}
+/* 3D ORBITAL BACKGROUND */
+.mission-view {
+  background: transparent !important;
+}
+
+.orbital-stage {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 0 !important;
+}
+
+.orbital-stage canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
 }
