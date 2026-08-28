@@ -12,9 +12,56 @@
 .telemetry-card p { display: flex; justify-content: space-between; }
 .telemetry-card p b { color: #edf7fb; font-weight: 500; }
 .telemetry-card em { display: block; border-top: 1px solid #ffffff12; padding-top: 9px; margin-top: 11px; color: #55e6b2; font: 9px 'DM Mono'; font-style: normal; }
-.mission-rail, .analysis-rail { transition: padding .2s ease, background .2s ease; }
-.mission-rail.collapsed, .analysis-rail.collapsed { min-width: 0; padding: 0; overflow: visible; }
-.mission-rail.collapsed .rail-content, .analysis-rail.collapsed .rail-content { display: none; }
+.mission-rail,
+.analysis-rail {
+  position: relative;
+  z-index: 20;
+
+  width: 320px;
+
+  padding: 22px;
+
+  background: rgba(8, 24, 38, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(85, 216, 255, 0.45);
+  border-radius: 18px;
+
+  box-shadow:
+    0 0 25px rgba(0, 180, 255, 0.12),
+    inset 0 0 20px rgba(85, 216, 255, 0.04);
+
+  transition:
+    width 0.45s ease,
+    padding 0.45s ease,
+    opacity 0.35s ease;
+}
+
+.mission-rail {
+  left: auto;
+}
+
+.analysis-rail {
+  right: auto;
+  min-width: 0;
+}
+
+/* COLLAPSED */
+
+.mission-rail.collapsed,
+.analysis-rail.collapsed {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.mission-rail.collapsed .rail-content,
+.analysis-rail.collapsed .rail-content {
+  display: none;
+}
 .collapse-toggle { position: absolute; z-index: 12; top: 18px; width: 28px; height: 31px; border: 1px solid #4e8aa4; border-radius: 4px; background: #10273a; color: #d5f4ff; font-size: 20px; line-height: 1; }
 .collapse-toggle.left { right: 9px; }.collapse-toggle.right { left: 9px; }
 .analysis-rail .metric strong { font-size: 24px; }
@@ -269,4 +316,186 @@
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   line-height: 1.55;
+}
+
+/* =========================================
+   SIDE PANEL / EDGE TAB DESIGN
+   ========================================= */
+
+.mission-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Keep Earth / 3D area as the middle layer */
+.orbital-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* LEFT PANEL */
+.mission-rail {
+  position: relative;
+  z-index: 20;
+  min-width: 0;
+
+  transition:
+    width 0.45s cubic-bezier(.22,.61,.36,1),
+    padding 0.45s ease,
+    opacity 0.3s ease;
+}
+
+/* RIGHT PANEL */
+.analysis-rail {
+  position: relative;
+  z-index: 20;
+  min-width: 0;
+
+  transition:
+    width 0.45s cubic-bezier(.22,.61,.36,1),
+    padding 0.45s ease,
+    opacity 0.3s ease;
+}
+
+/* =========================================
+   THIN CLOSED SIDEBARS
+   ========================================= */
+
+.mission-rail.collapsed,
+.analysis-rail.collapsed {
+  min-width: 48px;
+  width: 48px;
+  padding: 0;
+
+  overflow: visible;
+  opacity: 1;
+}
+
+/* Hide the content when closed */
+.mission-rail.collapsed .rail-content,
+.analysis-rail.collapsed .rail-content {
+  display: none;
+}
+
+/* =========================================
+   ARROW TAB
+   ========================================= */
+
+.collapse-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  z-index: 50;
+
+  width: 42px;
+  height: 76px;
+
+  border: 1px solid rgba(90, 190, 220, 0.55);
+  border-radius: 12px;
+
+  background: rgba(10, 31, 46, 0.92);
+  color: #d8f5ff;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 0 18px rgba(50, 190, 230, 0.12),
+    inset 0 0 12px rgba(90, 210, 240, 0.04);
+
+  transition:
+    width 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* LEFT arrow */
+.collapse-toggle.left {
+  right: -21px;
+}
+
+/* RIGHT arrow */
+.collapse-toggle.right {
+  left: -21px;
+}
+
+/* Hover */
+.collapse-toggle:hover {
+  background: rgba(18, 55, 75, 0.96);
+  border-color: rgba(100, 220, 255, 0.9);
+
+  box-shadow:
+    0 0 22px rgba(50, 200, 255, 0.22),
+    inset 0 0 14px rgba(90, 220, 255, 0.08);
+}
+
+/* =========================================
+   OPEN PANEL
+   ========================================= */
+
+.mission-rail:not(.collapsed),
+.analysis-rail:not(.collapsed) {
+  overflow: hidden;
+
+  background: rgba(8, 24, 38, 0.90);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(80, 175, 205, 0.38);
+  border-radius: 18px;
+
+  box-shadow:
+    0 0 25px rgba(0, 170, 220, 0.10),
+    inset 0 0 20px rgba(80, 210, 240, 0.035);
+}
+
+/* =========================================
+   EQUAL PANEL HEIGHT
+   ========================================= */
+
+.mission-rail,
+.analysis-rail {
+  height: calc(100% - 40px);
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   PANEL CONTENT
+   ========================================= */
+
+.mission-rail .rail-content,
+.analysis-rail .rail-content {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 900px) {
+
+  .mission-rail:not(.collapsed),
+  .analysis-rail:not(.collapsed) {
+    width: min(320px, 82vw);
+  }
+
+  .collapse-toggle {
+    width: 40px;
+    height: 68px;
+  }
 }

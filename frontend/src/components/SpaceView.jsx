@@ -581,7 +581,11 @@ export default function SpaceView() {
       setInspection(null);
     }
   };
-  return <section className="mission-view" style={{ gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px` }}>
+  return <section
+    className="mission-view"
+    style={{
+      gridTemplateColumns: `${leftCollapsed ? 48 : 320}px minmax(300px, 1fr) ${rightCollapsed ? 48 : panelWidth}px`
+    }}>
     <aside className={`mission-rail ${leftCollapsed ? 'collapsed' : ''}`}><button className="collapse-toggle left" onClick={() => setLeftCollapsed(x => !x)} title="Collapse or expand controls">{leftCollapsed ? '›' : '‹'}</button><div className="rail-content"><div className="eyebrow"><b /> LIVE ORBIT SCREENING</div><h1>Understand the space around Earth.</h1><p className="mission-copy">Select two catalogued objects to visualise their propagated paths and simplified relative-motion indicators.</p>
     <div className="picker-stack old-picker-stack"><Search catalog={catalog} label="OBJECT A" selected={selected[0]} color={colors[0]} onSelect={x => choose(0, x)} /><Search catalog={catalog} label="OBJECT B" selected={selected[1]} color={colors[1]} onSelect={x => choose(1, x)} />
       {/* NEW TOGGLE BUTTON */}
